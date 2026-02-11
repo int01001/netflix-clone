@@ -28,13 +28,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
   }
 
-  const { movieId, tmdbId } = await req.json();
+  const { movieId, imdbId } = await req.json();
   if (
     (!movieId || Number.isNaN(Number(movieId))) &&
-    (!tmdbId || Number.isNaN(Number(tmdbId)))
+    (!imdbId || typeof imdbId !== "string")
   ) {
     return NextResponse.json(
-      { message: "movieId or tmdbId is required" },
+      { message: "movieId or imdbId is required" },
       { status: 400 },
     );
   }
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const result = await toggleFavorite(
       user.id,
       movieId ? Number(movieId) : undefined,
-      tmdbId ? Number(tmdbId) : undefined,
+      imdbId ?? undefined,
     );
     return NextResponse.json(result);
   } catch (error) {

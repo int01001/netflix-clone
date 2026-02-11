@@ -5,6 +5,7 @@ import Hero from "./Hero";
 import Navbar from "./Navbar";
 import Row from "./Row";
 import TrailerModal from "./TrailerModal";
+import GenreFilter from "./GenreFilter";
 import type { HomeSections, Movie, User } from "@/lib/types";
 
 type Props = {
@@ -14,9 +15,44 @@ type Props = {
 
 export default function ClientHome({ sections, user }: Props) {
   const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
+  const [genre, setGenre] = useState<string>("All");
 
   const openMovie = (movie: Movie) => setActiveMovie(movie);
   const closeMovie = () => setActiveMovie(null);
+
+  const allMovies = useMemo(() => {
+    const list = [
+      sections.featured,
+      ...sections.trending,
+      ...sections.newReleases,
+      ...sections.sciFi,
+      ...sections.drama,
+      ...(sections.favorites ?? []),
+    ].filter(Boolean) as Movie[];
+
+    const seen = new Set<string | number>();
+    return list.filter((m) => {
+      const key = m.imdbId ?? m.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [sections]);
+
+  const genres = useMemo(() => {
+    const set = new Set<string>();
+    allMovies.forEach((m) => {
+      if (m.genre) set.add(m.genre);
+    });
+    return Array.from(set).sort();
+  }, [allMovies]);
+
+  const filtered = useMemo(() => {
+    if (genre === "All") return allMovies.slice(0, 18);
+    return allMovies.filter(
+      (m) => (m.genre ?? "").toLowerCase() === genre.toLowerCase(),
+    );
+  }, [allMovies, genre]);
 
   return (
     <>
@@ -27,11 +63,37 @@ export default function ClientHome({ sections, user }: Props) {
             movie={sections.featured}
             user={user}
             isFavorite={sections.favorites?.some(
-              (favorite) => favorite.tmdbId === sections.featured?.tmdbId,
+              (favorite) =>
+                favorite.imdbId
+                  ? favorite.imdbId === sections.featured?.imdbId
+                  : favorite.id === sections.featured?.id,
             )}
             onPlay={() => openMovie(sections.featured!)}
           />
         )}
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl font-semibold text-white">Browse by genre</h2>
+            {genres.length > 0 && (
+              <span className="text-xs text-slate-300">
+                {genre === "All" ? "All genres" : genre}
+              </span>
+            )}
+          </div>
+          <GenreFilter genres={genres} value={genre} onChange={setGenre} />
+          {filtered.length > 0 ? (
+            <Row
+              title={genre === "All" ? "Highlights" : `${genre} picks`}
+              movies={filtered}
+              favorites={sections.favorites}
+              user={user}
+              onPlay={openMovie}
+            />
+          ) : (
+            <p className="text-sm text-slate-300">No movies in this genre yet.</p>
+          )}
+        </div>
 
         <div className="space-y-8">
           <Row

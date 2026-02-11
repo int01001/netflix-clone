@@ -26,7 +26,7 @@ export default function Row({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [favoriteIds, setFavoriteIds] = useState(
-    new Set(favorites.map((f) => f.tmdbId ?? f.id)),
+    new Set(favorites.map((f) => (f.imdbId ? f.imdbId : f.id))),
   );
 
   const movieFavoriteIds = useMemo(() => favoriteIds, [favoriteIds]);
@@ -36,14 +36,14 @@ export default function Row({
       router.push("/login");
       return;
     }
-    const toggleId = movie.tmdbId ?? movie.id;
+    const toggleId = movie.imdbId ?? movie.id;
     startTransition(async () => {
       const res = await fetch("/api/favorites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          movieId: movie.tmdbId ? null : movie.id,
-          tmdbId: movie.tmdbId ?? movie.id,
+          movieId: movie.imdbId ? null : movie.id,
+          imdbId: movie.imdbId ?? null,
         }),
       });
       if (!res.ok) return;
@@ -88,7 +88,7 @@ export default function Row({
             >
               <MovieCard
                 movie={movie}
-                isFavorite={movieFavoriteIds.has(movie.tmdbId ?? movie.id)}
+                isFavorite={movieFavoriteIds.has(movie.imdbId ?? movie.id)}
                 onFavorite={handleFavorite}
                 onPlay={() => onPlay?.(movie)}
               />

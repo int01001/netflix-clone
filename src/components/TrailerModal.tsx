@@ -3,8 +3,8 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 import type { Movie } from "@/lib/types";
 
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
@@ -18,60 +18,83 @@ export default function TrailerModal({ movie, onClose }: Props) {
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null);
   const [watchUrl, setWatchUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const isSafeUrl = (url?: string | null) => {
-    if (!url) return false;
-    try {
-      const parsed = new URL(url);
-      return parsed.protocol === "https:" || parsed.protocol === "http:";
-    } catch {
-      return false;
-    }
-  };
+  const [startSeconds, setStartSeconds] = useState(0);
+  const playerRef = useRef<{
+    seekTo?: (amount: number, type?: "seconds" | "fraction") => void;
+    getDuration?: () => number;
+  } | null>(null);
+  const lastSentRef = useRef<number>(0);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       if (!movie) {
         setTrailerUrl(null);
+        setStartSeconds(0);
         return;
       }
-      setLoading(true);
-      try {
+      setStartSeconds(0);
+        setLoading(true);
+        try {
+          // fetch existing history to resume
+          const historyRes = await fetch(
+            `/api/history?movieId=${movie.id}&imdbId=${movie.imdbId ?? ""}`,
+            { cache: "no-store" },
+          );
+        if (historyRes.ok) {
+          const data = await historyRes.json();
+          if (data.history?.position_seconds) {
+            setStartSeconds(data.history.position_seconds);
+          }
+        }
+
         const params = new URLSearchParams();
         if (movie.title) params.set("title", movie.title);
         if (movie.imdbId) params.set("imdbId", movie.imdbId);
+        if (movie.slug) params.set("slug", movie.slug);
         const res = await fetch(`/api/trailer?${params.toString()}`);
         const data = await res.json();
         if (!active) return;
-        if (res.ok && data.url) {
-          setTrailerUrl(isSafeUrl(data.url) ? data.url : null);
-          setWatchUrl(isSafeUrl(data.watchUrl) ? data.watchUrl : null);
-        } else {
-          const fallback = `https://www.youtube.com/embed?autoplay=1&modestbranding=1&rel=0&showinfo=0&listType=search&list=${encodeURIComponent(
-            `${movie.title} official trailer`,
-          )}`;
-          setTrailerUrl(fallback);
-          setWatchUrl(
-            `https://www.youtube.com/results?search_query=${encodeURIComponent(
-              `${movie.title} official trailer`,
-            )}`,
-          );
-        }
+        const fallback = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+
+        const validUrl = (() => {
+          try {
+            const candidate = data.url ?? fallback;
+            const parsed = new URL(candidate);
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+              return parsed.toString();
+            }
+          } catch {
+            return fallback;
+          }
+          return fallback;
+        })();
+
+        const validWatch = (() => {
+          try {
+            const w = data.watchUrl ?? data.url ?? fallback;
+            const parsed = new URL(w);
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+              return parsed.toString();
+            }
+          } catch {
+            return fallback;
+          }
+          return fallback;
+        })();
+
+        setTrailerUrl(validUrl);
+        setWatchUrl(validWatch);
       } catch (err) {
         console.error(err);
         if (!active) return;
         const fallback = movie
-          ? `https://www.youtube.com/embed?autoplay=1&modestbranding=1&rel=0&showinfo=0&listType=search&list=${encodeURIComponent(
-              `${movie.title} official trailer`,
-            )}`
+          ? "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           : null;
-        setTrailerUrl(isSafeUrl(fallback) ? fallback : null);
+        setTrailerUrl(fallback);
         setWatchUrl(
           fallback
-            ? `https://www.youtube.com/results?search_query=${encodeURIComponent(
-                `${movie?.title ?? ""} official trailer`,
-              )}`
+            ? fallback
             : null,
         );
       } finally {
@@ -121,26 +144,36 @@ export default function TrailerModal({ movie, onClose }: Props) {
                   width="100%"
                   height="100%"
                   playing
+                  muted
                   controls
-                  light={
-                    movie.backdropUrl ?? movie.thumbnailUrl ?? undefined ? (
-                      <Image
-                        src={
-                          movie.backdropUrl ??
-                          movie.thumbnailUrl ??
-                          "/poster-fallback.jpg"
-                        }
-                        alt={movie.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : undefined
-                  }
+                  ref={playerRef}
                   config={{
-                    youtube: { playerVars: { modestbranding: 1, rel: 0 } },
+                    youtube: { playerVars: { modestbranding: 1, rel: 0, playsinline: 1 } },
                     file: { attributes: { controlsList: "nodownload" } },
                   }}
                   style={{ background: "#000" }}
+                  onReady={() => {
+                    if (startSeconds > 0 && playerRef.current?.seekTo) {
+                      playerRef.current.seekTo(startSeconds, "seconds");
+                    }
+                  }}
+                  onProgress={({ playedSeconds, loadedSeconds }) => {
+                    // throttle updates to every 5s of progress
+                    if (playedSeconds - lastSentRef.current < 5) return;
+                    lastSentRef.current = playedSeconds;
+                    fetch("/api/history", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        movieId: movie.id,
+                        imdbId: movie.imdbId ?? null,
+                        positionSeconds: Math.floor(playedSeconds),
+                        durationSeconds:
+                          Math.floor(playerRef.current?.getDuration?.() ?? 0) ||
+                          Math.floor(loadedSeconds),
+                      }),
+                    }).catch((err) => console.error("history save failed", err));
+                  }}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-slate-300">

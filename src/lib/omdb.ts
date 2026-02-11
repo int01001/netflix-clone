@@ -39,7 +39,7 @@ const mapOmdbToMovie = (m: OmdbMovie): Movie => {
   const duration = runtimeMatch ? Number(runtimeMatch[1]) : null;
   const rating = m.imdbRating ? Number(Number(m.imdbRating).toFixed(1)) : null;
   const year = m.Year ? Number.parseInt(m.Year.slice(0, 4), 10) : null;
-  const youtubeSearch = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+  const youtubeSearchEmbed = `https://www.youtube.com/embed?autoplay=1&rel=0&modestbranding=1&controls=1&listType=search&list=${encodeURIComponent(
     `${m.Title} official trailer`,
   )}`;
 
@@ -48,7 +48,6 @@ const mapOmdbToMovie = (m: OmdbMovie): Movie => {
   return {
     id: numericId,
     imdbId: m.imdbID,
-    tmdbId: numericId,
     slug: `${m.imdbID}-${m.Title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     title: m.Title,
     tagline: null,
@@ -59,7 +58,7 @@ const mapOmdbToMovie = (m: OmdbMovie): Movie => {
     description: m.Plot ?? null,
     backdropUrl: upgradePoster(m.Poster),
     thumbnailUrl: upgradePoster(m.Poster),
-    trailerUrl: youtubeSearch,
+    trailerUrl: youtubeSearchEmbed,
     featured: false,
   };
 };
@@ -114,8 +113,8 @@ export async function getOmdbSections() {
   };
 }
 
-export async function getOmdbMoviesByIds(ids: number[]): Promise<Movie[]> {
-  const imdbIds = ids.map((n) => `tt${n}`);
+export async function getOmdbMoviesByIds(ids: (number | string)[]): Promise<Movie[]> {
+  const imdbIds = ids.map((n) => (typeof n === "string" ? n : `tt${n}`));
   const movies = (
     await Promise.all(imdbIds.map((id) => fetchOmdbById(id)))
   ).filter(Boolean) as OmdbMovie[];

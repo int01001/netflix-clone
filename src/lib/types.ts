@@ -7,7 +7,6 @@ export type User = {
 
 export type Movie = {
   id: number;
-  tmdbId?: number | null;
   imdbId?: string | null;
   slug: string;
   title: string;

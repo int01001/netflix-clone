@@ -14,7 +14,7 @@ type Props = {
   onPlay?: () => void;
 };
 
-export default function Hero({ movie, user, isFavorite }: Props) {
+export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
   const router = useRouter();
   const [favorite, setFavorite] = useState(isFavorite ?? false);
   const [pending, startTransition] = useTransition();
@@ -31,8 +31,8 @@ export default function Hero({ movie, user, isFavorite }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          movieId: movie.tmdbId ? null : movie.id,
-          tmdbId: movie.tmdbId ?? movie.id,
+          movieId: movie.imdbId ? null : movie.id,
+          imdbId: movie.imdbId ?? null,
         }),
       });
       if (res.ok) {

@@ -24,7 +24,7 @@ type MovieRow = {
 
 export const mapMovie = (row: MovieRow): Movie => ({
   id: row.id,
-  tmdbId: null,
+  imdbId: null,
   imdbId: null,
   slug: row.slug,
   title: row.title,
@@ -78,11 +78,11 @@ export async function getMovies(): Promise<Movie[]> {
 export async function getFavorites(userId: number): Promise<Movie[]> {
   noStore();
   const favs = await query<
-    { movie_id: number | null; tmdb_id: number | null }[]
-  >("SELECT movie_id, tmdb_id FROM favorites WHERE user_id = ?", [userId]);
+    { movie_id: number | null; imdb_id: string | null }[]
+  >("SELECT movie_id, imdb_id FROM favorites WHERE user_id = ?", [userId]);
 
   const localIds = favs.filter((f) => f.movie_id).map((f) => f.movie_id!);
-  const tmdbIds = favs.filter((f) => f.tmdb_id).map((f) => f.tmdb_id!);
+  const imdbIds = favs.filter((f) => f.imdb_id).map((f) => f.imdb_id!);
 
   const localMovies = localIds.length
     ? await query<MovieRow[]>(
@@ -96,7 +96,7 @@ export async function getFavorites(userId: number): Promise<Movie[]> {
       )
     : [];
 
-  const omdbMovies = tmdbIds.length ? await getOmdbMoviesByIds(tmdbIds) : [];
+  const omdbMovies = imdbIds.length ? await getOmdbMoviesByIds(imdbIds) : [];
 
   return [...localMovies.map(mapMovie), ...omdbMovies];
 }
@@ -165,10 +165,10 @@ export async function getHomeSections(
 export async function toggleFavorite(
   userId: number,
   movieId?: number,
-  tmdbId?: number,
+  imdbId?: string,
 ): Promise<{ favorite: boolean }> {
-  const column = tmdbId ? "tmdb_id" : "movie_id";
-  const value = tmdbId ?? movieId;
+  const column = imdbId ? "imdb_id" : "movie_id";
+  const value = imdbId ?? movieId;
 
   if (!value) throw new Error("movieId or tmdbId required");
 
@@ -186,8 +186,8 @@ export async function toggleFavorite(
   }
 
   await execute(
-    "INSERT INTO favorites (user_id, movie_id, tmdb_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP",
-    [userId, movieId ?? null, tmdbId ?? null],
+    "INSERT INTO favorites (user_id, movie_id, imdb_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP",
+    [userId, movieId ?? null, imdbId ?? null],
   );
   return { favorite: true };
 }

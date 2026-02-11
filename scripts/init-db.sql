@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS netflix_local CHARACTER SET utf8mb4 COLLATE utf8mb
 USE netflix_local;
 
 -- Reset movie/favorite tables so schema stays in sync with seed
+DROP TABLE IF EXISTS watch_history;
 DROP TABLE IF EXISTS favorites;
 DROP TABLE IF EXISTS movies;
 
@@ -33,14 +34,29 @@ CREATE TABLE IF NOT EXISTS movies (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS watch_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  movie_id INT NULL,
+  imdb_id VARCHAR(20) NULL,
+  position_seconds INT NOT NULL DEFAULT 0,
+  duration_seconds INT NOT NULL DEFAULT 0,
+  last_watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_movie (user_id, movie_id),
+  UNIQUE KEY uniq_user_imdb (user_id, imdb_id),
+  CONSTRAINT fk_history_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_history_movie FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS favorites (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   movie_id INT NULL,
-  tmdb_id INT NULL,
+  imdb_id VARCHAR(20) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_user_movie (user_id, movie_id),
-  UNIQUE KEY uniq_user_tmdb (user_id, tmdb_id),
+  UNIQUE KEY uniq_user_imdb (user_id, imdb_id),
   CONSTRAINT fk_favorites_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_favorites_movie FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
