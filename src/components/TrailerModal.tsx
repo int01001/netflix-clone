@@ -34,13 +34,13 @@ export default function TrailerModal({ movie, onClose }: Props) {
         return;
       }
       setStartSeconds(0);
-        setLoading(true);
-        try {
-          // fetch existing history to resume
-          const historyRes = await fetch(
-            `/api/history?movieId=${movie.id}&imdbId=${movie.imdbId ?? ""}`,
-            { cache: "no-store" },
-          );
+      setLoading(true);
+      try {
+        // fetch existing history to resume
+        const historyRes = await fetch(
+          `/api/history?movieId=${movie.id}&imdbId=${movie.imdbId ?? ""}`,
+          { cache: "no-store" },
+        );
         if (historyRes.ok) {
           const data = await historyRes.json();
           if (data.history?.position_seconds) {
@@ -57,10 +57,10 @@ export default function TrailerModal({ movie, onClose }: Props) {
         if (!active) return;
         const fallback = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
 
-        const validUrl = (() => {
+        const getSafe = (u?: string | null) => {
           try {
-            const candidate = data.url ?? fallback;
-            const parsed = new URL(candidate);
+            if (!u) return fallback;
+            const parsed = new URL(u);
             if (parsed.protocol === "https:" || parsed.protocol === "http:") {
               return parsed.toString();
             }
@@ -68,20 +68,10 @@ export default function TrailerModal({ movie, onClose }: Props) {
             return fallback;
           }
           return fallback;
-        })();
+        };
 
-        const validWatch = (() => {
-          try {
-            const w = data.watchUrl ?? data.url ?? fallback;
-            const parsed = new URL(w);
-            if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-              return parsed.toString();
-            }
-          } catch {
-            return fallback;
-          }
-          return fallback;
-        })();
+        const validUrl = getSafe(data.url);
+        const validWatch = getSafe(data.watchUrl ?? data.url);
 
         setTrailerUrl(validUrl);
         setWatchUrl(validWatch);

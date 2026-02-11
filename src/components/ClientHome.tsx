@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Hero from "./Hero";
 import Navbar from "./Navbar";
 import Row from "./Row";
 import TrailerModal from "./TrailerModal";
 import GenreFilter from "./GenreFilter";
+import InfiniteRows from "./InfiniteRows";
 import type { HomeSections, Movie, User } from "@/lib/types";
 
 type Props = {
@@ -136,6 +137,8 @@ export default function ClientHome({ sections, user }: Props) {
               onPlay={openMovie}
             />
           )}
+
+          <InfiniteRows user={user} favorites={sections.favorites} />
         </div>
       </div>
 

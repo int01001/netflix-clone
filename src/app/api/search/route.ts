@@ -29,13 +29,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
+  const page = Math.min(Math.max(Number(searchParams.get("page") ?? 1), 1), 10);
   if (!q || !q.trim()) {
     return NextResponse.json({ results: [] });
   }
 
   try {
     const key = ensureKey();
-    const url = `${API_URL}?apikey=${key}&s=${encodeURIComponent(q)}&type=movie&page=1`;
+    const url = `${API_URL}?apikey=${key}&s=${encodeURIComponent(q)}&type=movie&page=${page}`;
     const res = await fetch(url);
     if (!res.ok) return NextResponse.json({ results: [] }, { status: res.status });
     const data = await res.json();
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
       const trailerSearch = `https://www.youtube.com/embed?autoplay=1&rel=0&modestbranding=1&controls=1&listType=search&list=${encodeURIComponent(
         `${m.Title} official trailer`,
       )}`;
+      const poster = m.Poster && m.Poster !== "N/A" ? m.Poster : null;
       return {
         id: numericId,
         imdbId: m.imdbID,
@@ -60,8 +62,8 @@ export async function GET(req: NextRequest) {
         durationMinutes: null,
         rating: null,
         description: null,
-        backdropUrl: upgradePoster(m.Poster),
-        thumbnailUrl: upgradePoster(m.Poster),
+        backdropUrl: upgradePoster(poster),
+        thumbnailUrl: upgradePoster(poster),
         trailerUrl: trailerSearch,
         featured: false,
       };

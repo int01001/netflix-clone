@@ -58,8 +58,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Fallback: embed search playlist (always return something usable)
-    // Fallback: static trailer for known seeds, else search-embed
+    // Fallback: static trailer for known seeds
     if (slug && fallbackTrailerMap[slug]) {
       return NextResponse.json({
         url: fallbackTrailerMap[slug],
@@ -68,6 +67,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Final fallback: generic MP4
     const genericMp4 =
       "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
     return NextResponse.json({

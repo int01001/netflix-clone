@@ -15,6 +15,12 @@ type Props = {
 export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Props) {
   const fallbackImage =
     "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80";
+  const imageUrl =
+    movie.thumbnailUrl && movie.thumbnailUrl !== "N/A"
+      ? movie.thumbnailUrl
+      : movie.backdropUrl && movie.backdropUrl !== "N/A"
+        ? movie.backdropUrl
+        : fallbackImage;
 
   return (
     <motion.div
@@ -24,7 +30,7 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
     >
       <div className="relative aspect-[16/9]">
         <Image
-          src={movie.thumbnailUrl ?? movie.backdropUrl ?? fallbackImage}
+          src={imageUrl.startsWith("http") ? imageUrl : fallbackImage}
           alt={movie.title}
           fill
           className="object-cover transition duration-300 group-hover:brightness-110"

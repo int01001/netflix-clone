@@ -20,6 +20,12 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
   const [pending, startTransition] = useTransition();
   const fallbackImage =
     "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1600&q=80";
+  const heroImage =
+    movie.backdropUrl && movie.backdropUrl !== "N/A"
+      ? movie.backdropUrl
+      : movie.thumbnailUrl && movie.thumbnailUrl !== "N/A"
+        ? movie.thumbnailUrl
+        : fallbackImage;
 
   const toggleFavorite = () => {
     if (!user) {
@@ -46,7 +52,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
     <section className="relative overflow-hidden rounded-3xl border border-white/5 bg-black/50">
       <div className="absolute inset-0 opacity-40">
         <Image
-          src={movie.backdropUrl ?? movie.thumbnailUrl ?? fallbackImage}
+          src={heroImage.startsWith("http") ? heroImage : fallbackImage}
           alt={movie.title}
           fill
           className="object-cover"
@@ -130,7 +136,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
           className="relative hidden aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl shadow-black/50 lg:block"
         >
           <Image
-            src={movie.thumbnailUrl ?? movie.backdropUrl ?? fallbackImage}
+            src={heroImage.startsWith("http") ? heroImage : fallbackImage}
             alt={movie.title}
             fill
             className="object-cover"
