@@ -1,77 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const API_URL = "https://www.omdbapi.com/";
-
-const ensureKey = () => {
-  const key = process.env.OMDB_API_KEY;
-  if (!key) throw new Error("OMDB_API_KEY is missing");
-  return key;
-};
-
-const upgradePoster = (url?: string | null) => {
-  if (!url) return null;
-  return url
-    .replace(/SX\d+/i, "SX900")
-    .replace(/SY\d+/i, "SY900")
-    .replace(/UX\d+/i, "UX900");
-};
-
-type OmdbSearchItem = {
-  imdbID: string;
-  Title: string;
-  Year?: string;
-  Type?: string;
-  Poster?: string;
-};
+import { getTmdbMoviesByGenre, searchTmdbMovies } from "@/lib/tmdb";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q");
-  const page = Math.min(Math.max(Number(searchParams.get("page") ?? 1), 1), 10);
-  if (!q || !q.trim()) {
+  const q = searchParams.get("q")?.trim() ?? "";
+  const genre = searchParams.get("genre")?.trim() ?? "";
+  const page = Math.min(Math.max(Number(searchParams.get("page") ?? 1), 1), 20);
+  const searchTerm = genre || q;
+
+  if (!searchTerm) {
     return NextResponse.json({ results: [] });
   }
 
   try {
-    const key = ensureKey();
-    const url = `${API_URL}?apikey=${key}&s=${encodeURIComponent(q)}&type=movie&page=${page}`;
-    const res = await fetch(url);
-    if (!res.ok) return NextResponse.json({ results: [] }, { status: res.status });
-    const data = await res.json();
-    if (data.Response === "False") return NextResponse.json({ results: [] });
-
-    const items: OmdbSearchItem[] = data.Search ?? [];
-    const results = items.map((m, idx) => {
-      const year = m.Year ? Number.parseInt(m.Year, 10) : null;
-      const numericId = Number(m.imdbID.replace("tt", "")) || idx;
-      const trailerSearch = `https://www.youtube.com/embed?autoplay=1&rel=0&modestbranding=1&controls=1&listType=search&list=${encodeURIComponent(
-        `${m.Title} official trailer`,
-      )}`;
-      const poster = m.Poster && m.Poster !== "N/A" ? m.Poster : null;
-      return {
-        id: numericId,
-        imdbId: m.imdbID,
-        tmdbId: numericId,
-        slug: `${m.imdbID}-${m.Title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-        title: m.Title,
-        tagline: null,
-        genre: null,
-        year,
-        durationMinutes: null,
-        rating: null,
-        description: null,
-        backdropUrl: upgradePoster(poster),
-        thumbnailUrl: upgradePoster(poster),
-        trailerUrl: trailerSearch,
-        featured: false,
-      };
-    });
+    const results = genre
+      ? await getTmdbMoviesByGenre(genre, page)
+      : await searchTmdbMovies(q, page);
 
     return NextResponse.json({ results });
   } catch (error) {
-    console.error("Search failed", error);
-    return NextResponse.json({ results: [] }, { status: 500 });
+    console.error("TMDB search failed", error);
+    return NextResponse.json({ results: [] });
   }
 }

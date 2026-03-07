@@ -3,8 +3,7 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Movie } from "@/lib/types";
 
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
@@ -19,28 +18,35 @@ export default function TrailerModal({ movie, onClose }: Props) {
   const [watchUrl, setWatchUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [startSeconds, setStartSeconds] = useState(0);
-  const playerRef = useRef<{
-    seekTo?: (amount: number, type?: "seconds" | "fraction") => void;
-    getDuration?: () => number;
-  } | null>(null);
+  const playerRef = useRef<HTMLVideoElement | null>(null);
   const lastSentRef = useRef<number>(0);
 
   useEffect(() => {
     let active = true;
+
     const load = async () => {
       if (!movie) {
         setTrailerUrl(null);
+        setWatchUrl(null);
         setStartSeconds(0);
         return;
       }
+
       setStartSeconds(0);
+      lastSentRef.current = 0;
       setLoading(true);
+
       try {
-        // fetch existing history to resume
-        const historyRes = await fetch(
-          `/api/history?movieId=${movie.id}&imdbId=${movie.imdbId ?? ""}`,
-          { cache: "no-store" },
-        );
+        const isExternal = (movie.imdbId ?? "").startsWith("tmdb:");
+
+        // Fetch existing history to resume.
+        const historyParams = new URLSearchParams();
+        if (!isExternal) historyParams.set("movieId", String(movie.id));
+        if (movie.imdbId) historyParams.set("imdbId", movie.imdbId);
+
+        const historyRes = await fetch(`/api/history?${historyParams.toString()}`, {
+          cache: "no-store",
+        });
         if (historyRes.ok) {
           const data = await historyRes.json();
           if (data.history?.position_seconds) {
@@ -51,46 +57,46 @@ export default function TrailerModal({ movie, onClose }: Props) {
         const params = new URLSearchParams();
         if (movie.title) params.set("title", movie.title);
         if (movie.imdbId) params.set("imdbId", movie.imdbId);
-        if (movie.slug) params.set("slug", movie.slug);
+        if (movie.tmdbId) params.set("tmdbId", String(movie.tmdbId));
+
         const res = await fetch(`/api/trailer?${params.toString()}`);
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!active) return;
-        const fallback = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
 
         const getSafe = (u?: string | null) => {
           try {
-            if (!u) return fallback;
+            if (!u) return null;
             const parsed = new URL(u);
             if (parsed.protocol === "https:" || parsed.protocol === "http:") {
               return parsed.toString();
             }
           } catch {
-            return fallback;
+            return null;
           }
-          return fallback;
+          return null;
         };
 
+        if (!res.ok) {
+          setTrailerUrl(null);
+          setWatchUrl(null);
+          return;
+        }
+
         const validUrl = getSafe(data.url);
-        const validWatch = getSafe(data.watchUrl ?? data.url);
+        const validWatch = getSafe(data.watchUrl ?? data.url ?? null);
 
         setTrailerUrl(validUrl);
         setWatchUrl(validWatch);
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
         if (!active) return;
-        const fallback = movie
-          ? "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-          : null;
-        setTrailerUrl(fallback);
-        setWatchUrl(
-          fallback
-            ? fallback
-            : null,
-        );
+        setTrailerUrl(null);
+        setWatchUrl(null);
       } finally {
         if (active) setLoading(false);
       }
     };
+
     load();
     return () => {
       active = false;
@@ -109,7 +115,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
           <div className="absolute inset-0" onClick={onClose} />
 
           <motion.div
-            className="relative z-10 w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0f] shadow-2xl"
+            className="glass relative z-10 w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl"
             initial={{ scale: 0.96, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.96, opacity: 0, y: 10 }}
@@ -117,7 +123,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
           >
             <button
               onClick={onClose}
-              className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+              className="absolute right-3 top-3 z-20 rounded-full border border-white/20 bg-black/60 p-2 text-white transition hover:bg-[rgba(229,9,20,0.24)]"
               aria-label="Close trailer"
             >
               <XMarkIcon className="h-6 w-6" />
@@ -126,41 +132,53 @@ export default function TrailerModal({ movie, onClose }: Props) {
             <div className="aspect-video w-full bg-black">
               {loading ? (
                 <div className="flex h-full items-center justify-center text-slate-300">
-                  Fetching trailer…
+                  Fetching trailer...
                 </div>
               ) : trailerUrl ? (
                 <ReactPlayer
-                  url={trailerUrl}
+                  src={trailerUrl}
                   width="100%"
                   height="100%"
                   playing
                   muted
                   controls
+                  playsInline
                   ref={playerRef}
                   config={{
-                    youtube: { playerVars: { modestbranding: 1, rel: 0, playsinline: 1 } },
-                    file: { attributes: { controlsList: "nodownload" } },
+                    youtube: {
+                      rel: 0,
+                      start: startSeconds > 0 ? startSeconds : undefined,
+                    },
                   }}
                   style={{ background: "#000" }}
                   onReady={() => {
-                    if (startSeconds > 0 && playerRef.current?.seekTo) {
-                      playerRef.current.seekTo(startSeconds, "seconds");
+                    if (startSeconds > 0 && playerRef.current) {
+                      try {
+                        playerRef.current.currentTime = startSeconds;
+                      } catch {
+                        // Ignore seek errors when provider does not expose currentTime yet.
+                      }
                     }
                   }}
-                  onProgress={({ playedSeconds, loadedSeconds }) => {
-                    // throttle updates to every 5s of progress
+                  onTimeUpdate={(event) => {
+                    const media = event.currentTarget;
+                    const playedSeconds = media.currentTime;
+                    if (!Number.isFinite(playedSeconds) || playedSeconds <= 0) return;
+
+                    // Throttle updates to every 5 seconds of progress.
                     if (playedSeconds - lastSentRef.current < 5) return;
                     lastSentRef.current = playedSeconds;
+
+                    const duration = Number.isFinite(media.duration) ? media.duration : 0;
+
                     fetch("/api/history", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        movieId: movie.id,
+                        movieId: (movie.imdbId ?? "").startsWith("tmdb:") ? null : movie.id,
                         imdbId: movie.imdbId ?? null,
                         positionSeconds: Math.floor(playedSeconds),
-                        durationSeconds:
-                          Math.floor(playerRef.current?.getDuration?.() ?? 0) ||
-                          Math.floor(loadedSeconds),
+                        durationSeconds: Math.floor(duration),
                       }),
                     }).catch((err) => console.error("history save failed", err));
                   }}
@@ -174,14 +192,10 @@ export default function TrailerModal({ movie, onClose }: Props) {
 
             <div className="grid gap-4 p-5 sm:grid-cols-[2fr_1fr] sm:items-center">
               <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-red-200/80">
-                  Trailer
-                </p>
+                <p className="text-xs uppercase tracking-[0.2em] text-red-200/80">Trailer</p>
                 <h3 className="text-xl font-bold text-white">{movie.title}</h3>
                 {movie.description && (
-                  <p className="text-sm text-slate-300/90 line-clamp-3">
-                    {movie.description}
-                  </p>
+                  <p className="line-clamp-3 text-sm text-slate-300/90">{movie.description}</p>
                 )}
                 <div className="flex items-center gap-3 text-xs text-slate-300/80">
                   {movie.year && <span>{movie.year}</span>}
@@ -193,20 +207,21 @@ export default function TrailerModal({ movie, onClose }: Props) {
                   {movie.durationMinutes && <span>{movie.durationMinutes}m</span>}
                 </div>
               </div>
+
               <div className="flex flex-col gap-2 text-sm text-slate-200">
                 {watchUrl && (
                   <a
                     href={watchUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-lg bg-white/10 px-3 py-2 text-center font-semibold text-white transition hover:bg-white/15"
+                    className="btn-primary rounded-lg px-3 py-2 text-center font-semibold transition"
                   >
                     Open in new tab
                   </a>
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-lg border border-white/10 px-3 py-2 text-center font-semibold text-white/80 transition hover:border-white/30"
+                  className="rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-center font-semibold text-white/80 transition hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
                 >
                   Close
                 </button>

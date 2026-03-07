@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Hero from "./Hero";
 import Navbar from "./Navbar";
 import Row from "./Row";
@@ -17,6 +17,9 @@ type Props = {
 export default function ClientHome({ sections, user }: Props) {
   const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
   const [genre, setGenre] = useState<string>("All");
+  const [genreMovies, setGenreMovies] = useState<Movie[]>([]);
+  const [genreLoading, setGenreLoading] = useState(false);
+  const genreMode = genre !== "All";
 
   const openMovie = (movie: Movie) => setActiveMovie(movie);
   const closeMovie = () => setActiveMovie(null);
@@ -48,18 +51,75 @@ export default function ClientHome({ sections, user }: Props) {
     return Array.from(set).sort();
   }, [allMovies]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadGenreMovies = async () => {
+      if (genre === "All") {
+        setGenreMovies([]);
+        setGenreLoading(false);
+        return;
+      }
+
+      setGenreLoading(true);
+      try {
+        const pages = [1, 2, 3, 4, 5, 6];
+        const responses = await Promise.all(
+          pages.map(async (page) => {
+            const res = await fetch(
+              `/api/search?genre=${encodeURIComponent(genre)}&page=${page}`,
+              { cache: "no-store" },
+            );
+            if (!res.ok) return { results: [] as Movie[] };
+            return (await res.json()) as { results?: Movie[] };
+          }),
+        );
+
+        if (!active) return;
+
+        const list = responses.flatMap((response) => response.results ?? []);
+        const seen = new Set<string | number>();
+        const deduped = list.filter((movie) => {
+          const key = movie.imdbId ?? movie.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        setGenreMovies(deduped);
+      } catch (error) {
+        if (!active) return;
+        console.error("Genre movie fetch failed", error);
+        setGenreMovies([]);
+      } finally {
+        if (active) setGenreLoading(false);
+      }
+    };
+
+    loadGenreMovies();
+    return () => {
+      active = false;
+    };
+  }, [genre]);
+
   const filtered = useMemo(() => {
-    if (genre === "All") return allMovies.slice(0, 18);
+    if (!genreMode) return allMovies.slice(0, 24);
+
+    const exactFromApi = genreMovies.filter(
+      (m) => (m.genre ?? "").toLowerCase() === genre.toLowerCase(),
+    );
+    if (exactFromApi.length) return exactFromApi;
+
     return allMovies.filter(
       (m) => (m.genre ?? "").toLowerCase() === genre.toLowerCase(),
     );
-  }, [allMovies, genre]);
+  }, [allMovies, genre, genreMode, genreMovies]);
 
   return (
     <>
       <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 py-6 md:px-6 md:py-10">
         <Navbar user={user} onSelectMovie={openMovie} />
-        {sections.featured && (
+        {!genreMode && sections.featured && (
           <Hero
             movie={sections.featured}
             user={user}
@@ -83,6 +143,9 @@ export default function ClientHome({ sections, user }: Props) {
             )}
           </div>
           <GenreFilter genres={genres} value={genre} onChange={setGenre} />
+          {genre !== "All" && genreLoading && (
+            <p className="text-sm text-slate-300">Loading more {genre} movies...</p>
+          )}
           {filtered.length > 0 ? (
             <Row
               title={genre === "All" ? "Highlights" : `${genre} picks`}
@@ -90,56 +153,59 @@ export default function ClientHome({ sections, user }: Props) {
               favorites={sections.favorites}
               user={user}
               onPlay={openMovie}
+              layout={genreMode ? "grid" : "carousel"}
             />
           ) : (
             <p className="text-sm text-slate-300">No movies in this genre yet.</p>
           )}
         </div>
 
-        <div className="space-y-8">
-          <Row
-            title="Trending now"
-            movies={sections.trending}
-            favorites={sections.favorites}
-            user={user}
-            anchorId="series"
-            onPlay={openMovie}
-          />
-          <Row
-            title="New & popular"
-            movies={sections.newReleases}
-            favorites={sections.favorites}
-            user={user}
-            anchorId="new"
-            onPlay={openMovie}
-          />
-          <Row
-            title="Sci-Fi worlds"
-            movies={sections.sciFi}
-            favorites={sections.favorites}
-            user={user}
-            anchorId="movies"
-            onPlay={openMovie}
-          />
-          <Row
-            title="Dramas that linger"
-            movies={sections.drama}
-            favorites={sections.favorites}
-            user={user}
-            onPlay={openMovie}
-          />
-          {sections.favorites && sections.favorites.length > 0 && (
+        {!genreMode && (
+          <div className="space-y-8">
             <Row
-              title="My List"
-              movies={sections.favorites}
+              title="Trending now"
+              movies={sections.trending}
+              favorites={sections.favorites}
+              user={user}
+              anchorId="series"
+              onPlay={openMovie}
+            />
+            <Row
+              title="New & popular"
+              movies={sections.newReleases}
+              favorites={sections.favorites}
+              user={user}
+              anchorId="new"
+              onPlay={openMovie}
+            />
+            <Row
+              title="Sci-Fi worlds"
+              movies={sections.sciFi}
+              favorites={sections.favorites}
+              user={user}
+              anchorId="movies"
+              onPlay={openMovie}
+            />
+            <Row
+              title="Dramas that linger"
+              movies={sections.drama}
               favorites={sections.favorites}
               user={user}
               onPlay={openMovie}
             />
-          )}
+            {sections.favorites && sections.favorites.length > 0 && (
+              <Row
+                title="My List"
+                movies={sections.favorites}
+                favorites={sections.favorites}
+                user={user}
+                onPlay={openMovie}
+              />
+            )}
 
-          <InfiniteRows user={user} favorites={sections.favorites} />
-        </div>
+            <InfiniteRows favorites={sections.favorites} />
+          </div>
+        )}
       </div>
 
       <TrailerModal movie={activeMovie} onClose={closeMovie} />

@@ -5,7 +5,7 @@ import Logo from "@/components/Logo";
 
 export default function Loading() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-black">
+    <div className="app-shell flex min-h-screen flex-col items-center justify-center gap-6">
       <Logo />
       <motion.div
         className="relative h-20 w-20"
@@ -23,7 +23,7 @@ export default function Loading() {
           transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
         />
       </motion.div>
-      <p className="text-sm text-slate-300">Loading your watchlist…</p>
+      <p className="text-sm text-slate-300">Loading your watchlist...</p>
     </div>
   );
 }

@@ -25,7 +25,7 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
   return (
     <motion.div
       whileHover={{ scale: 1.03 }}
-      className="group relative overflow-hidden rounded-xl border border-white/5 bg-white/5"
+      className="group relative overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(160deg,rgba(26,26,30,0.78),rgba(10,10,12,0.72))] shadow-[0_18px_35px_rgba(0,0,0,0.45)] transition hover:border-[rgba(229,9,20,0.58)]"
       onClick={() => onPlay?.(movie)}
     >
       <div className="relative aspect-[16/9]">
@@ -42,11 +42,11 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
             e.stopPropagation();
             onFavorite?.(movie);
           }}
-          className="absolute right-2 top-2 rounded-full bg-black/60 p-2 text-white opacity-0 transition group-hover:opacity-100"
+          className="absolute right-2 top-2 rounded-full border border-white/20 bg-black/65 p-2 text-white opacity-0 transition group-hover:opacity-100"
           aria-label="Toggle favorite"
         >
           <HeartIcon
-            className={`h-5 w-5 ${isFavorite ? "text-red-400" : "text-white"}`}
+            className={`h-5 w-5 ${isFavorite ? "text-[var(--accent)]" : "text-white"}`}
           />
         </button>
       </div>
@@ -56,8 +56,8 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
             {movie.title}
           </p>
           {movie.rating && (
-            <span className="text-xs font-semibold text-amber-300">
-              ★ {movie.rating}
+            <span className="text-xs font-semibold text-red-200">
+              IMDb {movie.rating}
             </span>
           )}
         </div>
@@ -70,3 +70,5 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
     </motion.div>
   );
 }
+
+

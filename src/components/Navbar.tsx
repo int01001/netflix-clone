@@ -52,6 +52,11 @@ export default function Navbar({ user, onSelectMovie }: Props) {
                 className={`transition-colors hover:text-white ${
                   pathname === link.href ? "text-white" : ""
                 }`}
+                style={
+                  pathname === link.href
+                    ? { textShadow: "0 0 14px rgba(229,9,20,0.68)" }
+                    : undefined
+                }
               >
                 {link.label}
               </Link>
@@ -61,14 +66,14 @@ export default function Navbar({ user, onSelectMovie }: Props) {
 
         <div className="flex items-center gap-2 text-slate-100">
           <button
-            className="rounded-full p-2 hover:bg-white/10"
+            className="rounded-full p-2 transition hover:bg-[rgba(229,9,20,0.14)] hover:text-red-100"
             aria-label="Search"
             onClick={() => setSearchOpen(true)}
           >
             <MagnifyingGlassIcon className="h-5 w-5" />
           </button>
           <button
-            className="hidden rounded-full p-2 hover:bg-white/10 sm:block"
+            className="hidden rounded-full p-2 transition hover:bg-[rgba(229,9,20,0.14)] hover:text-red-100 sm:block"
             aria-label="Notifications"
             onClick={() => setNotifOpen((v) => !v)}
           >
@@ -81,7 +86,7 @@ export default function Navbar({ user, onSelectMovie }: Props) {
               </div>
               <button
                 onClick={handleLogout}
-                className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white transition hover:bg-white/20"
+                className="rounded-full border border-white/20 bg-white/[0.03] px-3 py-1 text-sm font-semibold text-white transition hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
               >
                 Log out
               </button>
@@ -89,13 +94,13 @@ export default function Navbar({ user, onSelectMovie }: Props) {
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-900/30 transition hover:shadow-red-900/50"
+              className="btn-primary rounded-full px-4 py-2 text-sm font-semibold transition"
             >
               Sign in
             </Link>
           )}
           <button
-            className="rounded-full p-2 hover:bg-white/10 md:hidden"
+            className="rounded-full p-2 transition hover:bg-[rgba(229,9,20,0.14)] hover:text-red-100 md:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label="Open menu"
           >
@@ -108,25 +113,25 @@ export default function Navbar({ user, onSelectMovie }: Props) {
         <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
-          className="mx-auto mt-2 max-w-6xl rounded-xl bg-black/70 px-4 py-3 text-sm text-slate-100 shadow-lg md:hidden"
+          className="glass mx-auto mt-2 max-w-6xl rounded-xl px-4 py-3 text-sm text-slate-100 shadow-lg md:hidden"
         >
           <div className="flex flex-col gap-2">
             {links.map((link) => (
-              <Link key={link.href} href={link.href} className="py-1">
+              <Link key={link.href} href={link.href} className="rounded-md px-2 py-1 transition hover:bg-[rgba(229,9,20,0.14)]">
                 {link.label}
               </Link>
             ))}
             {user ? (
               <button
                 onClick={handleLogout}
-                className="rounded-lg bg-white/10 px-3 py-2 text-left font-semibold text-white"
+                className="rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-left font-semibold text-white transition hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
               >
                 Log out
               </button>
             ) : (
               <Link
                 href="/signup"
-                className="rounded-lg bg-[var(--accent)] px-3 py-2 text-left font-semibold text-white"
+                className="btn-primary rounded-lg px-3 py-2 text-left font-semibold"
               >
                 Sign up
               </Link>
@@ -147,7 +152,7 @@ export default function Navbar({ user, onSelectMovie }: Props) {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="absolute right-4 top-16 z-50 w-64 rounded-xl border border-white/10 bg-black/80 p-3 text-sm text-slate-200 shadow-xl"
+            className="glass absolute right-4 top-16 z-50 w-64 rounded-xl p-3 text-sm text-slate-200 shadow-xl"
           >
             <div className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-400">
               Notifications

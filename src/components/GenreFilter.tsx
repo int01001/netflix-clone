@@ -26,8 +26,8 @@ export default function GenreFilter({ genres, value, onChange }: Props) {
             onClick={() => onChange(genre)}
             className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
               active
-                ? "border-white bg-white text-black"
-                : "border-white/20 bg-white/5 text-slate-100 hover:border-white/40"
+                ? "border-[var(--accent)] bg-[rgba(229,9,20,0.24)] text-white shadow-[0_10px_24px_rgba(229,9,20,0.35)]"
+                : "border-white/20 bg-white/[0.03] text-slate-200 hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.12)]"
             }`}
           >
             {genre}

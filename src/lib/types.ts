@@ -8,6 +8,7 @@ export type User = {
 export type Movie = {
   id: number;
   imdbId?: string | null;
+  tmdbId?: number | null;
   slug: string;
   title: string;
   tagline: string | null;

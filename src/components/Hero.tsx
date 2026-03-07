@@ -49,8 +49,8 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-white/5 bg-black/50">
-      <div className="absolute inset-0 opacity-40">
+    <section className="glass relative overflow-hidden rounded-3xl">
+      <div className="absolute inset-0 opacity-55">
         <Image
           src={heroImage.startsWith("http") ? heroImage : fallbackImage}
           alt={movie.title}
@@ -58,7 +58,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/80 to-transparent" />
       </div>
 
       <div className="relative grid gap-6 px-6 py-12 sm:px-10 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:py-16">
@@ -66,7 +66,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
           <motion.p
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-red-200"
+            className="inline-flex items-center rounded-full border border-[rgba(229,9,20,0.44)] bg-[rgba(229,9,20,0.22)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-red-100 shadow-[0_8px_26px_rgba(229,9,20,0.28)]"
           >
             New & Trending
           </motion.p>
@@ -93,13 +93,13 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
             {movie.year && <span>{movie.year}</span>}
             {movie.durationMinutes && <span>{movie.durationMinutes} min</span>}
             {movie.genre && (
-              <span className="rounded-full bg-white/10 px-2 py-1 text-xs uppercase tracking-wide text-white">
+              <span className="rounded-full border border-white/20 bg-white/[0.06] px-2 py-1 text-xs uppercase tracking-wide text-white">
                 {movie.genre}
               </span>
             )}
             {movie.rating && (
-              <span className="flex items-center gap-1 text-amber-300">
-                ★ {movie.rating}
+              <span className="flex items-center gap-1 text-red-200">
+                IMDb {movie.rating}
               </span>
             )}
           </div>
@@ -107,7 +107,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
           <div className="flex flex-wrap gap-3">
             <motion.button
               whileTap={{ scale: 0.97 }}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-white/20 transition hover:translate-y-0.5 hover:shadow-white/30"
+              className="btn-primary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition hover:translate-y-0.5"
               onClick={() => onPlay?.()}
             >
               <PlayIcon className="h-5 w-5" />
@@ -119,8 +119,8 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
               onClick={toggleFavorite}
               className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition ${
                 favorite
-                  ? "bg-white/10 text-white ring-2 ring-[var(--accent)]"
-                  : "bg-[var(--accent)] text-white shadow-lg shadow-red-900/40 hover:shadow-red-900/60"
+                  ? "border border-[rgba(229,9,20,0.72)] bg-[rgba(229,9,20,0.26)] text-white"
+                  : "border border-white/20 bg-white/[0.05] text-white hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
               }`}
             >
               <PlusIcon className="h-5 w-5" />
@@ -133,7 +133,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.15 }}
-          className="relative hidden aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl shadow-black/50 lg:block"
+          className="glass-soft relative hidden aspect-[4/3] overflow-hidden rounded-2xl border border-[rgba(229,9,20,0.26)] shadow-2xl shadow-black/50 lg:block"
         >
           <Image
             src={heroImage.startsWith("http") ? heroImage : fallbackImage}
@@ -146,3 +146,5 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
     </section>
   );
 }
+
+

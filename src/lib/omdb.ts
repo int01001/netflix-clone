@@ -10,8 +10,10 @@ const OMDB_IDS = {
 };
 
 const ensureKey = () => {
-  const key = process.env.OMDB_API_KEY;
-  if (!key) throw new Error("OMDB_API_KEY is missing");
+  const key = process.env.OMDB_API_KEY?.trim();
+  if (!key || key.toLowerCase().includes("your_omdb_api_key_here")) {
+    throw new Error("OMDB_API_KEY is missing or placeholder");
+  }
   return key;
 };
 
@@ -77,8 +79,13 @@ async function fetchOmdbById(id: string): Promise<OmdbMovie | null> {
   const url = `${API_URL}?apikey=${key}&i=${id}&plot=short`;
   const res = await fetch(url, { cache: "force-cache" });
   if (!res.ok) return null;
-  const data = (await res.json()) as OmdbMovie & { Response?: string };
-  if (data.Response === "False") return null;
+  const data = (await res.json()) as OmdbMovie & { Response?: string; Error?: string };
+  if (data.Response === "False") {
+    if ((data.Error ?? "").toLowerCase().includes("api key")) {
+      throw new Error(`OMDb auth error: ${data.Error}`);
+    }
+    return null;
+  }
   return data;
 }
 
@@ -102,6 +109,16 @@ export async function getOmdbSections() {
     map.sciFi?.[0] ??
     map.drama?.[0] ??
     null;
+
+  const totalCount =
+    (map.trending?.length ?? 0) +
+    (map.newReleases?.length ?? 0) +
+    (map.sciFi?.length ?? 0) +
+    (map.drama?.length ?? 0);
+  if (totalCount === 0) {
+    throw new Error("OMDb returned no catalog entries");
+  }
+
   if (featured) featured.featured = true;
 
   return {

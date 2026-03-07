@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MovieCard from "./MovieCard";
 import TrailerModal from "./TrailerModal";
-import type { Movie, User } from "@/lib/types";
+import type { Movie } from "@/lib/types";
 
 type Props = {
-  user: User | null;
   favorites?: Movie[];
 };
 
@@ -29,60 +28,89 @@ export default function InfiniteRows({ favorites = [] }: Props) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState<Movie | null>(null);
+
+  const loadingRef = useRef(false);
+  const pageRef = useRef(1);
+  const termRef = useRef(0);
   const sentinel = useRef<HTMLDivElement | null>(null);
 
   const favoriteIds = useMemo(
-    () => new Set(favorites.map((f) => f.imdbId ?? f.id)),
+    () => new Set(favorites.map((favorite) => favorite.imdbId ?? favorite.id)),
     [favorites],
   );
 
   const loadMore = useCallback(async () => {
-    if (loading) return;
+    if (loadingRef.current) return;
+
+    loadingRef.current = true;
     setLoading(true);
-    const term = terms[termIndex % terms.length];
+
+    const currentTerm = terms[termRef.current % terms.length];
+    const currentPage = pageRef.current;
+
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(term)}&page=${page}`);
+      const res = await fetch(
+        `/api/search?q=${encodeURIComponent(currentTerm)}&page=${currentPage}`,
+      );
       const data = await res.json();
       const incoming: Movie[] = (data.results ?? []).filter(Boolean);
+
       setItems((prev) => {
-        const seen = new Set(prev.map((m) => m.imdbId ?? m.id));
+        const seen = new Set(prev.map((movie) => movie.imdbId ?? movie.id));
         const merged = [...prev];
-        incoming.forEach((m) => {
-          const key = m.imdbId ?? m.id;
+
+        incoming.forEach((movie) => {
+          const key = movie.imdbId ?? movie.id;
           if (!seen.has(key)) {
             seen.add(key);
-            merged.push(m);
+            merged.push(movie);
           }
         });
+
         return merged;
       });
-      setPage((p) => p + 1);
-      setTermIndex((i) => (page >= 10 ? i + 1 : i)); // move to next term after 10 pages
-      if (page >= 10) setPage(1);
-    } catch (e) {
-      console.error("infinite load failed", e);
+
+      let nextPage = currentPage + 1;
+      let nextTerm = termRef.current;
+
+      if (nextPage > 10) {
+        nextPage = 1;
+        nextTerm += 1;
+      }
+
+      pageRef.current = nextPage;
+      termRef.current = nextTerm;
+      setPage(nextPage);
+      setTermIndex(nextTerm);
+    } catch (error) {
+      console.error("infinite load failed", error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  }, [loading, page, termIndex]);
+  }, []);
 
   useEffect(() => {
     loadMore();
-  }, [loadMore]); // initial load
+  }, [loadMore]);
 
   useEffect(() => {
     const node = sentinel.current;
     if (!node) return;
-    const obs = new IntersectionObserver(
+
+    const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) loadMore();
+          if (entry.isIntersecting) {
+            loadMore();
+          }
         });
       },
       { rootMargin: "400px 0px" },
     );
-    obs.observe(node);
-    return () => obs.disconnect();
+
+    observer.observe(node);
+    return () => observer.disconnect();
   }, [loadMore]);
 
   return (
@@ -90,23 +118,24 @@ export default function InfiniteRows({ favorites = [] }: Props) {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white">More for you</h2>
         <span className="text-xs text-slate-300">
-          {items.length} titles · exploring “{terms[termIndex % terms.length]}”
+          {items.length} titles - exploring {terms[termIndex % terms.length]} (p{page})
         </span>
       </div>
+
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         {items.map((movie) => (
           <MovieCard
-            key={movie.slug}
+            key={movie.imdbId ?? movie.slug}
             movie={movie}
             isFavorite={favoriteIds.has(movie.imdbId ?? movie.id)}
             onPlay={setActive}
           />
         ))}
       </div>
+
       <div ref={sentinel} className="h-10 w-full" />
-      {loading && (
-        <p className="text-center text-sm text-slate-400">Loading more...</p>
-      )}
+      {loading && <p className="text-center text-sm text-slate-400">Loading more...</p>}
+
       <TrailerModal movie={active} onClose={() => setActive(null)} />
     </div>
   );

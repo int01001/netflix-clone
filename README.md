@@ -1,40 +1,44 @@
-# CineWave — Netflix‑style clone
+# CineWave - Netflix-style clone
 
-A Netflix-inspired streaming UI built with Next.js (App Router), React, Tailwind CSS v4, Framer Motion, and a MySQL-backed auth layer. Includes animated loading, login/signup flows, and local database seed data.
+A Netflix-inspired streaming UI built with Next.js (App Router), React, Tailwind CSS v4, Framer Motion, and a MySQL-backed auth layer.
 
 ## Stack
 - Next.js 16 (App Router, TypeScript)
-- Tailwind CSS v4
+- React + Tailwind CSS v4
 - Framer Motion + Heroicons
-- MySQL (via `mysql2`), JWT auth, bcrypt password hashing
+- MySQL (`mysql2`) for users, favorites, history
+- TMDB API for movie catalog and trailer metadata
 
 ## Quick start
 ```bash
 npm install
-cp .env.example .env            # adjust DB + AUTH_SECRET
-npm install
-npm run db:setup                # creates DB/tables + seeds (needs a local MySQL server)
+cp .env.example .env
+npm run db:setup
 npm run dev
 ```
 
-Visit http://localhost:3000 to browse the cinematic home, or go to `/login` and `/signup` to test auth. Favorites toggle is available on cards and the hero banner (stored in MySQL when available, otherwise the UI falls back to in-memory seed data). Search, trailers, and sections use OMDb + YouTube embeds (no TMDB required).
+Open `http://localhost:3000`.
 
-### MySQL setup notes
-- Expects a local server on `127.0.0.1:3306` by default; configure `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` in `.env`.
-- The seed script lives at `scripts/init-db.sql`; running `npm run db:setup` applies it via `mysql2`. If MySQL isn't installed yet, install it first or point the env vars at an existing instance.
+## Environment
+Set these values in `.env`:
 
-### OMDb catalog
-- Get a free OMDb API key: https://www.omdbapi.com/apikey.aspx and set `OMDB_API_KEY` in `.env`.
-- The app sources catalog data from OMDb (curated IMDb IDs for trending/new/sci-fi/drama) with YouTube trailer links per title.
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `AUTH_SECRET`
+- `TMDB_API_KEY` (required for full TMDB catalog and trailer lookups)
 
-## Available scripts
-- `npm run dev` — start the Next.js dev server.
-- `npm run build` / `npm run start` — production build + serve.
-- `npm run lint` — lint with Next core web vitals.
-- `npm run db:setup` — create & seed the local MySQL schema from `scripts/init-db.sql`.
+Create a TMDB API key at:
+`https://www.themoviedb.org/settings/api`
 
-## Key features
-- Animated loading screen, hero, and card interactions (Framer Motion).
-- Auth API routes (`/api/auth/login`, `/api/auth/signup`, `/api/auth/logout`, `/api/auth/me`) with JWT cookies.
-- Movie catalog API (`/api/movies`) and favorites toggle (`/api/favorites`).
-- Responsive, glassy UI with gradient backdrops tuned for desktop and mobile.
+## What works
+- Home page sections populated from TMDB (trending, now playing, top rated, popular)
+- Search powered by TMDB
+- Click any movie card to open an in-app trailer modal
+- Trailer auto-plays in the embedded player (no redirect required)
+- Favorites and watch-history persisted in MySQL for signed-in users
+
+## Scripts
+- `npm run dev` - start dev server
+- `npm run build` - production build
+- `npm run start` - run production server
+- `npm run lint` - lint the codebase
+- `npm run db:setup` - create and seed local MySQL schema

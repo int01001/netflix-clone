@@ -20,17 +20,23 @@ export async function GET(req: NextRequest) {
   const imdbId = searchParams.get("imdbId");
 
   try {
-    if (movieId || tmdbId) {
-      const rows = await query<HistoryRow[]>(
-        `SELECT position_seconds, duration_seconds, movie_id, imdb_id
-         FROM watch_history
-         WHERE user_id = ?
-           AND (${movieId ? "movie_id = ?" : "1=0"} OR ${imdbId ? "imdb_id = ?" : "1=0"})
-         LIMIT 1`,
-        [user.id, movieId ? Number(movieId) : 0, imdbId ? imdbId : ""].filter(
-          (v, idx) => (movieId || imdbId) || idx === 0,
-        ),
-      );
+    if (movieId || imdbId) {
+      let sql =
+        "SELECT position_seconds, duration_seconds, movie_id, imdb_id FROM watch_history WHERE user_id = ?";
+      const params: Array<number | string> = [user.id];
+
+      if (movieId && imdbId) {
+        sql += " AND (movie_id = ? OR imdb_id = ?) LIMIT 1";
+        params.push(Number(movieId), imdbId);
+      } else if (movieId) {
+        sql += " AND movie_id = ? LIMIT 1";
+        params.push(Number(movieId));
+      } else if (imdbId) {
+        sql += " AND imdb_id = ? LIMIT 1";
+        params.push(imdbId);
+      }
+
+      const rows = await query<HistoryRow[]>(sql, params);
       return NextResponse.json({ history: rows[0] ?? null });
     }
 
