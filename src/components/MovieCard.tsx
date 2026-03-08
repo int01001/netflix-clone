@@ -1,7 +1,6 @@
 'use client';
 
-import { HeartIcon } from "@heroicons/react/24/solid";
-import { motion } from "framer-motion";
+import { HeartIcon, PlayIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import type { Movie } from "@/lib/types";
 
@@ -14,7 +13,8 @@ type Props = {
 
 export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Props) {
   const fallbackImage =
-    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80";
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
+
   const imageUrl =
     movie.thumbnailUrl && movie.thumbnailUrl !== "N/A"
       ? movie.thumbnailUrl
@@ -22,53 +22,49 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
         ? movie.backdropUrl
         : fallbackImage;
 
+  const finalImage = imageUrl.startsWith("http") ? imageUrl : fallbackImage;
+
   return (
-    <motion.div
-      whileHover={{ scale: 1.03 }}
-      className="group relative overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(160deg,rgba(26,26,30,0.78),rgba(10,10,12,0.72))] shadow-[0_18px_35px_rgba(0,0,0,0.45)] transition hover:border-[rgba(229,9,20,0.58)]"
+    <article
+      className="netflix-card group relative cursor-pointer"
       onClick={() => onPlay?.(movie)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onPlay?.(movie);
+        }
+      }}
     >
-      <div className="relative aspect-[16/9]">
-        <Image
-          src={imageUrl.startsWith("http") ? imageUrl : fallbackImage}
-          alt={movie.title}
-          fill
-          className="object-cover transition duration-300 group-hover:brightness-110"
-          sizes="320px"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-80" />
+      <div className="relative aspect-video">
+        <Image src={finalImage} alt={movie.title} fill sizes="(max-width: 768px) 80vw, 320px" className="object-cover" />
+        <div className="netflix-card-overlay absolute inset-0" />
+
         <button
-          onClick={(e) => {
-            e.stopPropagation();
+          onClick={(event) => {
+            event.stopPropagation();
             onFavorite?.(movie);
           }}
-          className="absolute right-2 top-2 rounded-full border border-white/20 bg-black/65 p-2 text-white opacity-0 transition group-hover:opacity-100"
+          className="absolute right-2 top-2 rounded-full bg-black/75 p-1.5 text-white opacity-0 transition group-hover:opacity-100"
           aria-label="Toggle favorite"
         >
-          <HeartIcon
-            className={`h-5 w-5 ${isFavorite ? "text-[var(--accent)]" : "text-white"}`}
-          />
+          <HeartIcon className={`h-5 w-5 ${isFavorite ? "text-[#e50914]" : "text-white"}`} />
         </button>
-      </div>
-      <div className="flex flex-col gap-1 px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold text-white">
-            {movie.title}
-          </p>
-          {movie.rating && (
-            <span className="text-xs font-semibold text-red-200">
-              IMDb {movie.rating}
-            </span>
-          )}
+
+        <div className="absolute left-2 top-2 rounded-full bg-black/65 p-1.5 text-white opacity-0 transition group-hover:opacity-100">
+          <PlayIcon className="h-4 w-4" />
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-slate-200/70">
-          {movie.year && <span>{movie.year}</span>}
-          {movie.genre && <span className="uppercase tracking-wide">{movie.genre}</span>}
-          {movie.durationMinutes && <span>{movie.durationMinutes}m</span>}
+
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          <p className="line-clamp-1 text-[1.03rem] font-semibold text-white">{movie.title}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-[var(--muted)]">
+            {movie.year && <span>{movie.year}</span>}
+            {movie.genre && <span>{movie.genre}</span>}
+            {movie.rating && <span>IMDb {movie.rating}</span>}
+          </div>
         </div>
       </div>
-    </motion.div>
+    </article>
   );
 }
-
-

@@ -20,6 +20,8 @@ export type Movie = {
   backdropUrl: string | null;
   thumbnailUrl: string | null;
   trailerUrl: string | null;
+  progressSeconds?: number | null;
+  durationSeconds?: number | null;
   featured: boolean;
 };
 
@@ -29,5 +31,6 @@ export type HomeSections = {
   newReleases: Movie[];
   sciFi: Movie[];
   drama: Movie[];
+  continueWatching?: Movie[];
   favorites?: Movie[];
 };

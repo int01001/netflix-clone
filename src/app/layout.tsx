@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
-import ScrollBackgroundFx from "@/components/ScrollBackgroundFx";
 import "./globals.css";
 
 const geistSans = Plus_Jakarta_Sans({
@@ -30,7 +29,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased text-white`}
       >
-        <ScrollBackgroundFx />
         {children}
       </body>
     </html>

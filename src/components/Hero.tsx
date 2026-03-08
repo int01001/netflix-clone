@@ -1,10 +1,9 @@
 'use client';
 
 import { PlayIcon, PlusIcon } from "@heroicons/react/24/solid";
-import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { Movie, User } from "@/lib/types";
 
 type Props = {
@@ -18,6 +17,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
   const router = useRouter();
   const [favorite, setFavorite] = useState(isFavorite ?? false);
   const [pending, startTransition] = useTransition();
+  const sectionRef = useRef<HTMLElement | null>(null);
   const fallbackImage =
     "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1600&q=80";
   const heroImage =
@@ -32,6 +32,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
       router.push("/login");
       return;
     }
+
     startTransition(async () => {
       const res = await fetch("/api/favorites", {
         method: "POST",
@@ -41,110 +42,106 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
           imdbId: movie.imdbId ?? null,
         }),
       });
+
       if (res.ok) {
         const data = await res.json();
-        setFavorite(data.favorite);
+        setFavorite(Boolean(data.favorite));
       }
     });
   };
 
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+
+    const setParallax = (clientX: number, clientY: number) => {
+      const rect = node.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width - 0.5) * 24;
+      const y = ((clientY - rect.top) / rect.height - 0.5) * 24;
+      node.style.setProperty("--hero-x", `${x.toFixed(2)}px`);
+      node.style.setProperty("--hero-y", `${y.toFixed(2)}px`);
+    };
+
+    const handleMouseMove = (event: MouseEvent) => setParallax(event.clientX, event.clientY);
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!event.touches[0]) return;
+      setParallax(event.touches[0].clientX, event.touches[0].clientY);
+    };
+    const handleScroll = () => {
+      node.style.setProperty("--hero-scroll", `${window.scrollY.toFixed(2)}px`);
+    };
+
+    const resetPointer = () => {
+      node.style.setProperty("--hero-x", "0px");
+      node.style.setProperty("--hero-y", "0px");
+    };
+
+    handleScroll();
+    node.addEventListener("mousemove", handleMouseMove, { passive: true });
+    node.addEventListener("mouseleave", resetPointer);
+    node.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      node.removeEventListener("mousemove", handleMouseMove);
+      node.removeEventListener("mouseleave", resetPointer);
+      node.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   return (
-    <section className="glass relative overflow-hidden rounded-3xl">
-      <div className="absolute inset-0 opacity-55">
-        <Image
-          src={heroImage.startsWith("http") ? heroImage : fallbackImage}
-          alt={movie.title}
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/80 to-transparent" />
-      </div>
+    <section ref={sectionRef} className="hero-parallax relative min-h-[62vh] overflow-hidden md:min-h-[70vh]">
+      <Image
+        src={heroImage.startsWith("http") ? heroImage : fallbackImage}
+        alt={movie.title}
+        fill
+        priority
+        className="hero-media object-cover"
+      />
+      <div className="hero-ambient absolute inset-0" />
+      <div className="hero-vignette absolute inset-0" />
 
-      <div className="relative grid gap-6 px-6 py-12 sm:px-10 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:py-16">
-        <div className="space-y-4">
-          <motion.p
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center rounded-full border border-[rgba(229,9,20,0.44)] bg-[rgba(229,9,20,0.22)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-red-100 shadow-[0_8px_26px_rgba(229,9,20,0.28)]"
-          >
-            New & Trending
-          </motion.p>
+      <div className="relative flex min-h-[62vh] items-end md:min-h-[70vh]">
+        <div className="netflix-row-pad w-full pb-12 md:pb-20">
+          <div className="hero-panel p-6 md:p-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+              Featured
+            </p>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl"
-          >
-            {movie.title}
-          </motion.h1>
+            <h1 className="text-4xl font-black leading-[0.95] text-white drop-shadow-[0_6px_20px_rgba(0,0,0,0.6)] md:text-6xl">
+              {movie.title}
+            </h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="max-w-2xl text-base text-slate-200/80 sm:text-lg"
-          >
-            {movie.tagline ?? movie.description}
-          </motion.p>
+            <p className="mt-4 line-clamp-3 text-base text-[var(--muted)] md:text-lg">
+              {movie.tagline ?? movie.description}
+            </p>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-200/70">
-            {movie.year && <span>{movie.year}</span>}
-            {movie.durationMinutes && <span>{movie.durationMinutes} min</span>}
-            {movie.genre && (
-              <span className="rounded-full border border-white/20 bg-white/[0.06] px-2 py-1 text-xs uppercase tracking-wide text-white">
-                {movie.genre}
-              </span>
-            )}
-            {movie.rating && (
-              <span className="flex items-center gap-1 text-red-200">
-                IMDb {movie.rating}
-              </span>
-            )}
-          </div>
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/85">
+              {movie.year && <span>{movie.year}</span>}
+              {movie.durationMinutes && <span>{movie.durationMinutes}m</span>}
+              {movie.genre && <span>{movie.genre}</span>}
+              {movie.rating && <span>IMDb {movie.rating}</span>}
+            </div>
 
-          <div className="flex flex-wrap gap-3">
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              className="btn-primary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition hover:translate-y-0.5"
-              onClick={() => onPlay?.()}
-            >
-              <PlayIcon className="h-5 w-5" />
-              Watch trailer
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              disabled={pending}
-              onClick={toggleFavorite}
-              className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition ${
-                favorite
-                  ? "border border-[rgba(229,9,20,0.72)] bg-[rgba(229,9,20,0.26)] text-white"
-                  : "border border-white/20 bg-white/[0.05] text-white hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
-              }`}
-            >
-              <PlusIcon className="h-5 w-5" />
-              {favorite ? "In My List" : "Add to My List"}
-            </motion.button>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button className="nf-btn nf-btn-primary" onClick={() => onPlay?.()}>
+                <PlayIcon className="h-5 w-5" />
+                Play trailer
+              </button>
+
+              <button
+                onClick={toggleFavorite}
+                disabled={pending}
+                className="nf-btn nf-btn-secondary"
+              >
+                <PlusIcon className="h-5 w-5" />
+                {favorite ? "In My List" : "My List"}
+              </button>
+            </div>
           </div>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-          className="glass-soft relative hidden aspect-[4/3] overflow-hidden rounded-2xl border border-[rgba(229,9,20,0.26)] shadow-2xl shadow-black/50 lg:block"
-        >
-          <Image
-            src={heroImage.startsWith("http") ? heroImage : fallbackImage}
-            alt={movie.title}
-            fill
-            className="object-cover"
-          />
-        </motion.div>
       </div>
     </section>
   );
 }
-
-

@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTmdbTrailerWatchUrl } from "@/lib/tmdb";
+import { getUserFromRequest } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json(
+      { message: "Sign up or log in to watch trailers" },
+      { status: 401 },
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const title = searchParams.get("title") ?? "";
   const imdbId = searchParams.get("imdbId") ?? undefined;

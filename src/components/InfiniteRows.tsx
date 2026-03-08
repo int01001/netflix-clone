@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MovieCard from "./MovieCard";
-import TrailerModal from "./TrailerModal";
 import type { Movie } from "@/lib/types";
 
 type Props = {
   favorites?: Movie[];
+  onPlay?: (movie: Movie) => void;
 };
 
 const terms = [
@@ -22,12 +22,9 @@ const terms = [
   "crime",
 ];
 
-export default function InfiniteRows({ favorites = [] }: Props) {
+export default function InfiniteRows({ favorites = [], onPlay }: Props) {
   const [items, setItems] = useState<Movie[]>([]);
-  const [termIndex, setTermIndex] = useState(0);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [active, setActive] = useState<Movie | null>(null);
 
   const loadingRef = useRef(false);
   const pageRef = useRef(1);
@@ -80,8 +77,6 @@ export default function InfiniteRows({ favorites = [] }: Props) {
 
       pageRef.current = nextPage;
       termRef.current = nextTerm;
-      setPage(nextPage);
-      setTermIndex(nextTerm);
     } catch (error) {
       console.error("infinite load failed", error);
     } finally {
@@ -116,10 +111,8 @@ export default function InfiniteRows({ favorites = [] }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">More for you</h2>
-        <span className="text-xs text-slate-300">
-          {items.length} titles - exploring {terms[termIndex % terms.length]} (p{page})
-        </span>
+        <h2 className="netflix-headline">More Like This</h2>
+        <span className="text-xs text-[var(--muted)]">{items.length} titles</span>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
@@ -128,15 +121,13 @@ export default function InfiniteRows({ favorites = [] }: Props) {
             key={movie.imdbId ?? movie.slug}
             movie={movie}
             isFavorite={favoriteIds.has(movie.imdbId ?? movie.id)}
-            onPlay={setActive}
+            onPlay={onPlay}
           />
         ))}
       </div>
 
       <div ref={sentinel} className="h-10 w-full" />
-      {loading && <p className="text-center text-sm text-slate-400">Loading more...</p>}
-
-      <TrailerModal movie={active} onClose={() => setActive(null)} />
+      {loading && <p className="text-center text-sm text-[var(--muted)]">Loading more...</p>}
     </div>
   );
 }

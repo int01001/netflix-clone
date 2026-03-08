@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Movie } from "@/lib/types";
 
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+const MIN_TRAILER_LOADING_MS = 900;
 
 type Props = {
   movie: Movie | null;
@@ -35,6 +36,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
       setStartSeconds(0);
       lastSentRef.current = 0;
       setLoading(true);
+      const startedAt = Date.now();
 
       try {
         const isExternal = (movie.imdbId ?? "").startsWith("tmdb:");
@@ -93,6 +95,12 @@ export default function TrailerModal({ movie, onClose }: Props) {
         setTrailerUrl(null);
         setWatchUrl(null);
       } finally {
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < MIN_TRAILER_LOADING_MS) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, MIN_TRAILER_LOADING_MS - elapsed),
+          );
+        }
         if (active) setLoading(false);
       }
     };
@@ -107,7 +115,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
     <AnimatePresence>
       {movie && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -115,7 +123,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
           <div className="absolute inset-0" onClick={onClose} />
 
           <motion.div
-            className="glass relative z-10 w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl"
+            className="relative z-10 w-full max-w-5xl overflow-hidden rounded-md border border-white/15 bg-[#181818] shadow-2xl"
             initial={{ scale: 0.96, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.96, opacity: 0, y: 10 }}
@@ -123,7 +131,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
           >
             <button
               onClick={onClose}
-              className="absolute right-3 top-3 z-20 rounded-full border border-white/20 bg-black/60 p-2 text-white transition hover:bg-[rgba(229,9,20,0.24)]"
+              className="absolute right-3 top-3 z-20 rounded-full bg-black/75 p-2 text-white transition hover:bg-black"
               aria-label="Close trailer"
             >
               <XMarkIcon className="h-6 w-6" />
@@ -131,8 +139,13 @@ export default function TrailerModal({ movie, onClose }: Props) {
 
             <div className="aspect-video w-full bg-black">
               {loading ? (
-                <div className="flex h-full items-center justify-center text-slate-300">
-                  Fetching trailer...
+                <div className="flex h-full items-center justify-center bg-black">
+                  <div role="status" aria-label="Loading trailer" className="relative h-16 w-16">
+                    <span className="absolute inset-0 rounded-full border-2 border-white/15" />
+                    <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-[#f6121d] border-r-[#e50914]" />
+                    <span className="absolute inset-[10px] animate-pulse rounded-full border border-[#e50914]/45" />
+                    <span className="sr-only">Loading trailer</span>
+                  </div>
                 </div>
               ) : trailerUrl ? (
                 <ReactPlayer
@@ -192,15 +205,15 @@ export default function TrailerModal({ movie, onClose }: Props) {
 
             <div className="grid gap-4 p-5 sm:grid-cols-[2fr_1fr] sm:items-center">
               <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-red-200/80">Trailer</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Trailer</p>
                 <h3 className="text-xl font-bold text-white">{movie.title}</h3>
                 {movie.description && (
-                  <p className="line-clamp-3 text-sm text-slate-300/90">{movie.description}</p>
+                  <p className="line-clamp-3 text-sm text-[var(--muted)]">{movie.description}</p>
                 )}
-                <div className="flex items-center gap-3 text-xs text-slate-300/80">
+                <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
                   {movie.year && <span>{movie.year}</span>}
                   {movie.genre && (
-                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] uppercase tracking-wide text-white">
+                    <span className="rounded border border-white/25 px-2 py-1 text-[11px] uppercase tracking-wide text-white">
                       {movie.genre}
                     </span>
                   )}
@@ -214,14 +227,14 @@ export default function TrailerModal({ movie, onClose }: Props) {
                     href={watchUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="btn-primary rounded-lg px-3 py-2 text-center font-semibold transition"
+                    className="rounded border border-white/20 bg-white px-3 py-2 text-center font-semibold text-black transition hover:bg-white/80"
                   >
                     Open in new tab
                   </a>
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-center font-semibold text-white/80 transition hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
+                  className="rounded border border-white/20 bg-white/[0.03] px-3 py-2 text-center font-semibold text-white/80 transition hover:bg-white/[0.09]"
                 >
                   Close
                 </button>

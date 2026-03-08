@@ -1,14 +1,17 @@
 'use client';
 
-import { Bars3Icon, BellIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  BellIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Logo from "./Logo";
+import { useEffect, useState } from "react";
 import SearchModal from "./SearchModal";
-import type { User } from "@/lib/types";
-import type { Movie } from "@/lib/types";
+import Logo from "./Logo";
+import type { Movie, User } from "@/lib/types";
 
 type Props = {
   user: User | null;
@@ -25,9 +28,17 @@ const links = [
 export default function Navbar({ user, onSelectMovie }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 28);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -36,108 +47,117 @@ export default function Navbar({ user, onSelectMovie }: Props) {
   };
 
   return (
-    <motion.header
-      initial={{ y: -24, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="sticky top-0 z-50"
+    <header
+      className={`sticky top-0 z-50 transition-colors ${
+        scrolled ? "bg-[rgba(5,5,5,0.78)] backdrop-blur-sm" : "top-fade-nav"
+      }`}
     >
-      <div className="glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-3 backdrop-saturate-150 md:px-6">
-        <div className="flex items-center gap-4">
-          <Logo />
-          <nav className="hidden items-center gap-4 text-sm text-slate-200/80 md:flex">
+      <div className="netflix-row-pad py-2">
+        <div className="apple-glass flex h-[68px] items-center justify-between gap-3 rounded-2xl px-4 sm:px-5">
+          <div className="flex min-w-0 items-center gap-8">
+            <Logo />
+            <nav className="hidden items-center gap-5 text-[0.9rem] md:flex">
+              {links.map((link) => {
+                const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`transition-colors ${
+                      active ? "font-medium text-white" : "text-[var(--muted)] hover:text-white"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-3 text-white">
+            <button
+              className="rounded p-1.5 text-[var(--muted)] transition hover:text-white"
+              aria-label="Search"
+              onClick={() => setSearchOpen(true)}
+            >
+              <MagnifyingGlassIcon className="h-6 w-6" />
+            </button>
+
+            <button
+              className="hidden rounded p-1.5 text-[var(--muted)] transition hover:text-white sm:block"
+              aria-label="Notifications"
+              onClick={() => setNotifOpen((value) => !value)}
+            >
+              <BellIcon className="h-6 w-6" />
+            </button>
+
+            {user ? (
+              <div className="hidden items-center gap-3 sm:flex">
+                <span className="text-sm text-[var(--muted)]">{user.name.split(" ")[0]}</span>
+                <button
+                  onClick={handleLogout}
+                  className="rounded border border-white/30 px-2.5 py-1 text-xs font-semibold text-white transition hover:border-white"
+                >
+                  Log out
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="nf-signin">
+                Sign in
+              </Link>
+            )}
+
+            <button
+              className="rounded p-1.5 text-[var(--muted)] transition hover:text-white md:hidden"
+              onClick={() => setMenuOpen((value) => !value)}
+              aria-label="Open menu"
+            >
+              {menuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {menuOpen && (
+        <div className="netflix-row-pad md:hidden">
+          <div className="apple-glass mt-1 rounded-2xl border-t border-white/10 px-4 py-3">
+          <div className="flex flex-col gap-2 text-sm">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`transition-colors hover:text-white ${
-                  pathname === link.href ? "text-white" : ""
-                }`}
-                style={
-                  pathname === link.href
-                    ? { textShadow: "0 0 14px rgba(229,9,20,0.68)" }
-                    : undefined
-                }
+                className="rounded px-1 py-1 text-[var(--muted)] transition hover:text-white"
+                onClick={() => setMenuOpen(false)}
               >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-2 text-slate-100">
-          <button
-            className="rounded-full p-2 transition hover:bg-[rgba(229,9,20,0.14)] hover:text-red-100"
-            aria-label="Search"
-            onClick={() => setSearchOpen(true)}
-          >
-            <MagnifyingGlassIcon className="h-5 w-5" />
-          </button>
-          <button
-            className="hidden rounded-full p-2 transition hover:bg-[rgba(229,9,20,0.14)] hover:text-red-100 sm:block"
-            aria-label="Notifications"
-            onClick={() => setNotifOpen((v) => !v)}
-          >
-            <BellIcon className="h-5 w-5" />
-          </button>
-          {user ? (
-            <>
-              <div className="hidden text-sm font-medium text-slate-100 sm:block">
-                Hi, {user.name.split(" ")[0]}
-              </div>
-              <button
-                onClick={handleLogout}
-                className="rounded-full border border-white/20 bg-white/[0.03] px-3 py-1 text-sm font-semibold text-white transition hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
-              >
-                Log out
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className="btn-primary rounded-full px-4 py-2 text-sm font-semibold transition"
-            >
-              Sign in
-            </Link>
-          )}
-          <button
-            className="rounded-full p-2 transition hover:bg-[rgba(229,9,20,0.14)] hover:text-red-100 md:hidden"
-            onClick={() => setOpen((v) => !v)}
-            aria-label="Open menu"
-          >
-            <Bars3Icon className="h-6 w-6" />
-          </button>
-        </div>
-      </div>
-
-      {open && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          className="glass mx-auto mt-2 max-w-6xl rounded-xl px-4 py-3 text-sm text-slate-100 shadow-lg md:hidden"
-        >
-          <div className="flex flex-col gap-2">
-            {links.map((link) => (
-              <Link key={link.href} href={link.href} className="rounded-md px-2 py-1 transition hover:bg-[rgba(229,9,20,0.14)]">
                 {link.label}
               </Link>
             ))}
             {user ? (
               <button
                 onClick={handleLogout}
-                className="rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-left font-semibold text-white transition hover:border-[rgba(229,9,20,0.75)] hover:bg-[rgba(229,9,20,0.14)]"
+                className="mt-1 w-fit rounded border border-white/30 px-2.5 py-1 text-xs font-semibold text-white"
               >
                 Log out
               </button>
             ) : (
-              <Link
-                href="/signup"
-                className="btn-primary rounded-lg px-3 py-2 text-left font-semibold"
-              >
+              <Link href="/signup" className="mt-1 w-fit rounded bg-[#e50914] px-3 py-1.5 text-xs font-semibold">
                 Sign up
               </Link>
             )}
           </div>
-        </motion.div>
+          </div>
+        </div>
+      )}
+
+      {notifOpen && (
+        <div className="netflix-row-pad pointer-events-none absolute right-0 top-[70px] z-50 w-full">
+          <div className="apple-glass pointer-events-auto ml-auto w-[260px] rounded-xl p-3 text-sm text-[var(--muted)] shadow-2xl">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+              Notifications
+            </p>
+            <p>No new notifications.</p>
+          </div>
+        </div>
       )}
 
       <SearchModal
@@ -145,22 +165,6 @@ export default function Navbar({ user, onSelectMovie }: Props) {
         onClose={() => setSearchOpen(false)}
         onSelect={(movie) => onSelectMovie?.(movie)}
       />
-
-      <AnimatePresence>
-        {notifOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="glass absolute right-4 top-16 z-50 w-64 rounded-xl p-3 text-sm text-slate-200 shadow-xl"
-          >
-            <div className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-400">
-              Notifications
-            </div>
-            <p className="text-slate-300">No new notifications yet.</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.header>
+    </header>
   );
 }
