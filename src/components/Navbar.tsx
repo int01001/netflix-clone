@@ -22,7 +22,6 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/favorites", label: "My List" },
   { href: "/profile", label: "Profile" },
-  { href: "/#new", label: "New & Hot" },
 ];
 
 export default function Navbar({ user, onSelectMovie }: Props) {
@@ -56,15 +55,15 @@ export default function Navbar({ user, onSelectMovie }: Props) {
         <div className="apple-glass flex h-[68px] items-center justify-between gap-3 rounded-2xl px-4 sm:px-5">
           <div className="flex min-w-0 items-center gap-8">
             <Logo />
-            <nav className="hidden items-center gap-5 text-[0.9rem] md:flex">
+            <nav className="hidden items-center gap-5 md:flex">
               {links.map((link) => {
                 const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`transition-colors ${
-                      active ? "font-medium text-white" : "text-[var(--muted)] hover:text-white"
+                    className={`nf-navlink ${
+                      active ? "nf-navlink-active" : "text-[var(--muted)]"
                     }`}
                   >
                     {link.label}
@@ -76,7 +75,7 @@ export default function Navbar({ user, onSelectMovie }: Props) {
 
           <div className="flex items-center gap-3 text-white">
             <button
-              className="rounded p-1.5 text-[var(--muted)] transition hover:text-white"
+              className="nf-navicon rounded p-1.5 text-[var(--muted)] transition hover:text-white"
               aria-label="Search"
               onClick={() => setSearchOpen(true)}
             >
@@ -84,7 +83,7 @@ export default function Navbar({ user, onSelectMovie }: Props) {
             </button>
 
             <button
-              className="hidden rounded p-1.5 text-[var(--muted)] transition hover:text-white sm:block"
+              className="nf-navicon hidden rounded p-1.5 text-[var(--muted)] transition hover:text-white sm:block"
               aria-label="Notifications"
               onClick={() => setNotifOpen((value) => !value)}
             >
@@ -93,10 +92,10 @@ export default function Navbar({ user, onSelectMovie }: Props) {
 
             {user ? (
               <div className="hidden items-center gap-3 sm:flex">
-                <span className="text-sm text-[var(--muted)]">{user.name.split(" ")[0]}</span>
+                <span className="text-[0.98rem] text-[var(--muted)]">{user.name.split(" ")[0]}</span>
                 <button
                   onClick={handleLogout}
-                  className="rounded border border-white/30 px-2.5 py-1 text-xs font-semibold text-white transition hover:border-white"
+                  className="nf-logout rounded border border-white/30 px-2.5 py-1 text-xs font-semibold text-white transition"
                 >
                   Log out
                 </button>

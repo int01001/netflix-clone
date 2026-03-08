@@ -80,9 +80,22 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function getFavorites(userId: number): Promise<Movie[]> {
   noStore();
 
+  await execute(
+    "INSERT IGNORE INTO playlists (user_id, name) VALUES (?, ?)",
+    [userId, "My List"],
+  );
+
+  const playlistRows = await query<{ id: number }[]>(
+    "SELECT id FROM playlists WHERE user_id = ? AND name = ? LIMIT 1",
+    [userId, "My List"],
+  );
+
+  const playlistId = playlistRows[0]?.id;
+  if (!playlistId) return [];
+
   const favs = await query<{ imdb_id: string | null }[]>(
-    "SELECT imdb_id FROM favorites WHERE user_id = ? AND imdb_id IS NOT NULL",
-    [userId],
+    "SELECT imdb_id FROM playlist_items WHERE playlist_id = ? AND imdb_id IS NOT NULL",
+    [playlistId],
   );
 
   const externalIds = favs
@@ -177,10 +190,14 @@ export async function getHomeSections(userId?: number): Promise<HomeSections> {
 
   try {
     const tmdbSections = await getTmdbSections();
-    return { ...tmdbSections, favorites, continueWatching };
+    return {
+      ...tmdbSections,
+      favorites: favorites ?? [],
+      continueWatching: continueWatching ?? [],
+    };
   } catch (error) {
     console.error("TMDB catalog unavailable", error);
-    return emptySections(favorites, continueWatching);
+    return emptySections(favorites ?? [], continueWatching ?? []);
   }
 }
 
@@ -189,27 +206,44 @@ export async function toggleFavorite(
   movieId?: number,
   imdbId?: string,
 ): Promise<{ favorite: boolean }> {
-  const column = imdbId ? "imdb_id" : "movie_id";
-  const value = imdbId ?? movieId;
+  if (!movieId && !imdbId) throw new Error("movieId or imdbId required");
 
-  if (!value) throw new Error("movieId or imdbId required");
+  await execute(
+    "INSERT IGNORE INTO playlists (user_id, name) VALUES (?, ?)",
+    [userId, "My List"],
+  );
+
+  const playlistRows = await query<{ id: number }[]>(
+    "SELECT id FROM playlists WHERE user_id = ? AND name = ? LIMIT 1",
+    [userId, "My List"],
+  );
+
+  const playlistId = playlistRows[0]?.id;
+  if (!playlistId) throw new Error("Unable to resolve default playlist");
+
+  const whereColumn = imdbId ? "imdb_id" : "movie_id";
+  const whereValue = imdbId ?? movieId;
 
   const existing = await query<{ id: number }[]>(
-    `SELECT id FROM favorites WHERE user_id = ? AND ${column} = ? LIMIT 1`,
-    [userId, value],
+    `SELECT id FROM playlist_items WHERE playlist_id = ? AND ${whereColumn} = ? LIMIT 1`,
+    [playlistId, whereValue],
   );
 
   if (existing.length) {
-    await execute(`DELETE FROM favorites WHERE user_id = ? AND ${column} = ?`, [
-      userId,
-      value,
-    ]);
+    await execute(
+      `DELETE FROM playlist_items WHERE playlist_id = ? AND ${whereColumn} = ?`,
+      [playlistId, whereValue],
+    );
     return { favorite: false };
   }
 
   await execute(
-    "INSERT INTO favorites (user_id, movie_id, imdb_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP",
-    [userId, movieId ?? null, imdbId ?? null],
+    "INSERT INTO playlist_items (playlist_id, movie_id, imdb_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP",
+    [playlistId, movieId ?? null, imdbId ?? null],
+  );
+  await execute(
+    "UPDATE playlists SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+    [playlistId],
   );
   return { favorite: true };
 }

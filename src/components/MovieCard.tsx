@@ -1,6 +1,10 @@
 'use client';
 
-import { HeartIcon, PlayIcon } from "@heroicons/react/24/solid";
+import {
+  HeartIcon,
+  PlayIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/solid";
 import Image from "next/image";
 import type { Movie } from "@/lib/types";
 
@@ -8,10 +12,21 @@ type Props = {
   movie: Movie;
   isFavorite?: boolean;
   onFavorite?: (movie: Movie) => void;
+  onPickPlaylist?: (movie: Movie) => void;
   onPlay?: (movie: Movie) => void;
+  showRemove?: boolean;
+  onRemove?: (movie: Movie) => void;
 };
 
-export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Props) {
+export default function MovieCard({
+  movie,
+  isFavorite,
+  onFavorite,
+  onPickPlaylist,
+  onPlay,
+  showRemove,
+  onRemove,
+}: Props) {
   const fallbackImage =
     "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
 
@@ -44,6 +59,11 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
         <button
           onClick={(event) => {
             event.stopPropagation();
+            if (!isFavorite && onPickPlaylist) {
+              onPickPlaylist(movie);
+              return;
+            }
+
             onFavorite?.(movie);
           }}
           className="absolute right-2 top-2 rounded-full bg-black/75 p-1.5 text-white opacity-0 transition group-hover:opacity-100"
@@ -52,7 +72,20 @@ export default function MovieCard({ movie, isFavorite, onFavorite, onPlay }: Pro
           <HeartIcon className={`h-5 w-5 ${isFavorite ? "text-[#e50914]" : "text-white"}`} />
         </button>
 
-        <div className="absolute left-2 top-2 rounded-full bg-black/65 p-1.5 text-white opacity-0 transition group-hover:opacity-100">
+        {showRemove && (
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove?.(movie);
+            }}
+            className="absolute left-2 top-2 z-10 rounded-full bg-black/80 p-1.5 text-white transition hover:bg-black"
+            aria-label="Remove from continue watching"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        )}
+
+        <div className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/65 p-1.5 text-white opacity-0 transition group-hover:opacity-100">
           <PlayIcon className="h-4 w-4" />
         </div>
 

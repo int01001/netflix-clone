@@ -2,9 +2,7 @@ CREATE DATABASE IF NOT EXISTS netflix_local CHARACTER SET utf8mb4 COLLATE utf8mb
 USE netflix_local;
 
 -- Reset movie/favorite tables so schema stays in sync with seed
-DROP TABLE IF EXISTS watch_history;
-DROP TABLE IF EXISTS favorites;
-DROP TABLE IF EXISTS movies;
+
 
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -49,16 +47,38 @@ CREATE TABLE IF NOT EXISTS watch_history (
   CONSTRAINT fk_history_movie FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS favorites (
+CREATE TABLE IF NOT EXISTS playlists (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
+  name VARCHAR(80) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_name (user_id, name),
+  CONSTRAINT fk_playlists_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS playlist_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  playlist_id INT NOT NULL,
   movie_id INT NULL,
   imdb_id VARCHAR(20) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_user_movie (user_id, movie_id),
-  UNIQUE KEY uniq_user_imdb (user_id, imdb_id),
-  CONSTRAINT fk_favorites_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_favorites_movie FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+  UNIQUE KEY uniq_playlist_movie (playlist_id, movie_id),
+  UNIQUE KEY uniq_playlist_imdb (playlist_id, imdb_id),
+  CONSTRAINT fk_playlist_items_playlist FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+  CONSTRAINT fk_playlist_items_movie FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS password_reset_otps (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  otp_hash VARCHAR(255) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_password_reset_user (user_id),
+  INDEX idx_password_reset_expires (expires_at),
+  CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 INSERT INTO movies (slug, title, tagline, genre, year, duration_minutes, rating, description, backdrop_url, thumbnail_url, trailer_url, featured)

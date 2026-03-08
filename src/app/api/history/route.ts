@@ -84,3 +84,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Unable to save progress" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const movieId = searchParams.get("movieId");
+  const imdbId = searchParams.get("imdbId");
+
+  if (!movieId && !imdbId) {
+    return NextResponse.json(
+      { message: "movieId or imdbId required" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    if (movieId && imdbId) {
+      await execute(
+        "DELETE FROM watch_history WHERE user_id = ? AND (movie_id = ? OR imdb_id = ?)",
+        [user.id, Number(movieId), imdbId],
+      );
+    } else if (movieId) {
+      await execute("DELETE FROM watch_history WHERE user_id = ? AND movie_id = ?", [
+        user.id,
+        Number(movieId),
+      ]);
+    } else if (imdbId) {
+      await execute("DELETE FROM watch_history WHERE user_id = ? AND imdb_id = ?", [
+        user.id,
+        imdbId,
+      ]);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("History delete failed", error);
+    return NextResponse.json(
+      { message: "Unable to remove from continue watching" },
+      { status: 500 },
+    );
+  }
+}

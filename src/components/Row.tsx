@@ -4,6 +4,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import MovieCard from "./MovieCard";
+import PlaylistPickerModal from "./PlaylistPickerModal";
 import type { Movie, User } from "@/lib/types";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
   anchorId?: string;
   onPlay?: (movie: Movie) => void;
   layout?: "carousel" | "grid";
+  allowRemove?: boolean;
 };
 
 export default function Row({
@@ -24,12 +26,18 @@ export default function Row({
   anchorId,
   onPlay,
   layout = "carousel",
+  allowRemove = false,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [favoriteIds, setFavoriteIds] = useState(
     new Set(favorites.map((favorite) => (favorite.imdbId ? favorite.imdbId : favorite.id))),
   );
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMovie, setPickerMovie] = useState<Movie | null>(null);
+
+  const [visibleMovies, setVisibleMovies] = useState<Movie[]>(movies);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -64,6 +72,10 @@ export default function Row({
     };
   }, [isGrid, movies.length, updateScrollState]);
 
+  useEffect(() => {
+    setVisibleMovies(movies);
+  }, [movies]);
+
   const scrollByBlock = (direction: 1 | -1) => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -78,29 +90,38 @@ export default function Row({
     }
 
     const toggleId = movie.imdbId ?? movie.id;
-    startTransition(async () => {
-      const res = await fetch("/api/favorites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          movieId: movie.imdbId ? null : movie.id,
-          imdbId: movie.imdbId ?? null,
-        }),
-      });
+    if (favoriteIds.has(toggleId)) {
+      // For now, remove from the default playlist "My List".
+      // Once we add per-playlist membership UI, we can ask where to remove from.
+      startTransition(async () => {
+        const playlistsRes = await fetch("/api/playlists", { cache: "no-store" });
+        if (!playlistsRes.ok) return;
+        const playlistsData = (await playlistsRes.json()) as { playlists?: Array<{ id: number; name: string }> };
+        const myList = (playlistsData.playlists ?? []).find((p) => p.name === "My List");
+        if (!myList) return;
 
-      if (!res.ok) return;
-      const data = await res.json();
+        const res = await fetch("/api/playlists/items", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playlistId: myList.id,
+            movieId: movie.imdbId ? null : movie.id,
+            imdbId: movie.imdbId ?? null,
+          }),
+        });
 
-      setFavoriteIds((prev) => {
-        const next = new Set(prev);
-        if (data.favorite) {
-          next.add(toggleId);
-        } else {
+        if (!res.ok) return;
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
           next.delete(toggleId);
-        }
-        return next;
+          return next;
+        });
       });
-    });
+      return;
+    }
+
+    setPickerMovie(movie);
+    setPickerOpen(true);
   };
 
   if (!movies.length) return null;
@@ -151,7 +172,7 @@ export default function Row({
               : "hide-scrollbar flex gap-2 overflow-x-auto overflow-y-visible pb-2 pt-1"
           }
         >
-          {movies.map((movie) => (
+          {visibleMovies.map((movie) => (
             <div
               key={movie.imdbId ?? movie.id}
               className={isGrid ? "min-w-0" : "min-w-[220px] sm:min-w-[240px] md:min-w-[260px]"}
@@ -160,12 +181,60 @@ export default function Row({
                 movie={movie}
                 isFavorite={movieFavoriteIds.has(movie.imdbId ?? movie.id)}
                 onFavorite={handleFavorite}
+                onPickPlaylist={(picked) => {
+                  setPickerMovie(picked);
+                  setPickerOpen(true);
+                }}
                 onPlay={() => onPlay?.(movie)}
+                showRemove={allowRemove}
+                onRemove={() => {
+                  if (!user) {
+                    router.push("/login");
+                    return;
+                  }
+
+                  const key = movie.imdbId ?? movie.id;
+                  setVisibleMovies((prev) =>
+                    prev.filter((m) => (m.imdbId ?? m.id) !== key),
+                  );
+
+                  const params = new URLSearchParams();
+                  if (movie.imdbId) params.set("imdbId", movie.imdbId);
+                  if (!movie.imdbId) params.set("movieId", String(movie.id));
+
+                  startTransition(async () => {
+                    const res = await fetch(`/api/history?${params.toString()}`, {
+                      method: "DELETE",
+                    });
+
+                    if (!res.ok) {
+                      setVisibleMovies((prev) => [movie, ...prev]);
+                    }
+                  });
+                }}
               />
             </div>
           ))}
         </div>
       </div>
+
+      <PlaylistPickerModal
+        open={pickerOpen}
+        movie={pickerMovie}
+        onClose={() => {
+          setPickerOpen(false);
+          setPickerMovie(null);
+        }}
+        onAdded={() => {
+          if (!pickerMovie) return;
+          const toggleId = pickerMovie.imdbId ?? pickerMovie.id;
+          setFavoriteIds((prev) => {
+            const next = new Set(prev);
+            next.add(toggleId);
+            return next;
+          });
+        }}
+      />
     </section>
   );
 }

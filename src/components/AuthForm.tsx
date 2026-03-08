@@ -109,6 +109,14 @@ export default function AuthForm({ mode }: Props) {
         </motion.button>
       </form>
 
+      {mode === "login" && (
+        <div className="text-center">
+          <Link className="text-sm font-semibold text-white underline" href="/forgot-password">
+            Forgot password?
+          </Link>
+        </div>
+      )}
+
       <p className="text-center text-sm text-slate-300/80">
         {mode === "login" ? (
           <>

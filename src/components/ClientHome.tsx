@@ -178,6 +178,7 @@ export default function ClientHome({ sections, user }: Props) {
                   favorites={sections.favorites}
                   user={user}
                   onPlay={openMovie}
+                  allowRemove
                 />
               )}
 

@@ -4,6 +4,7 @@ import { PlayIcon, PlusIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import PlaylistPickerModal from "./PlaylistPickerModal";
 import type { Movie, User } from "@/lib/types";
 
 type Props = {
@@ -17,6 +18,7 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
   const router = useRouter();
   const [favorite, setFavorite] = useState(isFavorite ?? false);
   const [pending, startTransition] = useTransition();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const fallbackImage =
     "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1600&q=80";
@@ -33,21 +35,30 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
       return;
     }
 
-    startTransition(async () => {
-      const res = await fetch("/api/favorites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          movieId: movie.imdbId ? null : movie.id,
-          imdbId: movie.imdbId ?? null,
-        }),
-      });
+    if (favorite) {
+      startTransition(async () => {
+        const playlistsRes = await fetch("/api/playlists", { cache: "no-store" });
+        if (!playlistsRes.ok) return;
+        const playlistsData = (await playlistsRes.json()) as { playlists?: Array<{ id: number; name: string }> };
+        const myList = (playlistsData.playlists ?? []).find((p) => p.name === "My List");
+        if (!myList) return;
 
-      if (res.ok) {
-        const data = await res.json();
-        setFavorite(Boolean(data.favorite));
-      }
-    });
+        const res = await fetch("/api/playlists/items", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playlistId: myList.id,
+            movieId: movie.imdbId ? null : movie.id,
+            imdbId: movie.imdbId ?? null,
+          }),
+        });
+
+        if (res.ok) setFavorite(false);
+      });
+      return;
+    }
+
+    setPickerOpen(true);
   };
 
   useEffect(() => {
@@ -136,12 +147,19 @@ export default function Hero({ movie, user, isFavorite, onPlay }: Props) {
                 className="nf-btn nf-btn-secondary"
               >
                 <PlusIcon className="h-5 w-5" />
-                {favorite ? "In My List" : "My List"}
+                {favorite ? "In My List" : "Add to Playlist"}
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      <PlaylistPickerModal
+        open={pickerOpen}
+        movie={pickerOpen ? movie : null}
+        onClose={() => setPickerOpen(false)}
+        onAdded={() => setFavorite(true)}
+      />
     </section>
   );
 }

@@ -21,6 +21,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
   const [startSeconds, setStartSeconds] = useState(0);
   const playerRef = useRef<HTMLVideoElement | null>(null);
   const lastSentRef = useRef<number>(0);
+  const hasAppliedResumeRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -35,6 +36,7 @@ export default function TrailerModal({ movie, onClose }: Props) {
 
       setStartSeconds(0);
       lastSentRef.current = 0;
+      hasAppliedResumeRef.current = false;
       setLoading(true);
       const startedAt = Date.now();
 
@@ -153,7 +155,6 @@ export default function TrailerModal({ movie, onClose }: Props) {
                   width="100%"
                   height="100%"
                   playing
-                  muted
                   controls
                   playsInline
                   ref={playerRef}
@@ -165,9 +166,14 @@ export default function TrailerModal({ movie, onClose }: Props) {
                   }}
                   style={{ background: "#000" }}
                   onReady={() => {
-                    if (startSeconds > 0 && playerRef.current) {
+                    if (
+                      !hasAppliedResumeRef.current &&
+                      startSeconds > 0 &&
+                      playerRef.current
+                    ) {
                       try {
                         playerRef.current.currentTime = startSeconds;
+                        hasAppliedResumeRef.current = true;
                       } catch {
                         // Ignore seek errors when provider does not expose currentTime yet.
                       }
