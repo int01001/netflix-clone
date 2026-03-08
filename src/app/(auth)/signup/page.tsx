@@ -1,4 +1,4 @@
-import AuthForm from "@/components/AuthForm";
+import SignupClient from "@/components/SignupClient";
 
 export const metadata = {
   title: "Create account | CineWave",
@@ -19,7 +19,7 @@ export default function SignupPage() {
           UI powered by Next.js, Tailwind, and MySQL.
         </p>
       </div>
-      <AuthForm mode="signup" />
+      <SignupClient />
     </div>
   );
 }

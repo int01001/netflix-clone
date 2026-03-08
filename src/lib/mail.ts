@@ -41,3 +41,27 @@ export async function sendPasswordResetOtpEmail(params: {
     text,
   });
 }
+
+export async function sendWelcomeVerificationEmail(params: {
+  to: string;
+  name?: string;
+  otp: string;
+}) {
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER;
+  if (!from) {
+    throw new Error("SMTP_FROM is not configured.");
+  }
+
+  const transport = buildTransport();
+  const { to, name, otp } = params;
+
+  const subject = "Verify your CineWave account";
+  const text = `Hi${name ? ` ${name}` : ""},\n\nWelcome to CineWave! Your verification code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't sign up, you can ignore this email.`;
+
+  await transport.sendMail({
+    from,
+    to,
+    subject,
+    text,
+  });
+}

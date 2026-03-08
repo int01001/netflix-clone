@@ -1,7 +1,17 @@
 CREATE DATABASE IF NOT EXISTS netflix_local CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE netflix_local;
 
--- Reset movie/favorite tables so schema stays in sync with seed
+-- Drop and recreate all tables for a clean slate
+DROP TABLE IF EXISTS user_preferences;
+DROP TABLE IF EXISTS temp_signup_passwords;
+DROP TABLE IF EXISTS email_verification_otps;
+DROP TABLE IF EXISTS password_reset_otps;
+DROP TABLE IF EXISTS playlist_items;
+DROP TABLE IF EXISTS playlists;
+DROP TABLE IF EXISTS watch_history;
+DROP TABLE IF EXISTS favorites;
+DROP TABLE IF EXISTS movies;
+DROP TABLE IF EXISTS users;
 
 
 CREATE TABLE IF NOT EXISTS users (
@@ -10,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(191) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   avatar_url VARCHAR(255),
+  is_pending_profile BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -79,6 +90,39 @@ CREATE TABLE IF NOT EXISTS password_reset_otps (
   INDEX idx_password_reset_user (user_id),
   INDEX idx_password_reset_expires (expires_at),
   CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS email_verification_otps (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(191) NOT NULL,
+  otp_hash VARCHAR(255) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_email_otp (email),
+  INDEX idx_email_otp_email (email),
+  INDEX idx_email_otp_expires (expires_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  name VARCHAR(80),
+  phone VARCHAR(20),
+  date_of_birth DATE,
+  gender ENUM('male', 'female', 'other', 'prefer_not_to_say'),
+  preferred_genres JSON,
+  preferred_languages JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_prefs (user_id),
+  CONSTRAINT fk_user_prefs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS temp_signup_passwords (
+  email VARCHAR(191) PRIMARY KEY,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 INSERT INTO movies (slug, title, tagline, genre, year, duration_minutes, rating, description, backdrop_url, thumbnail_url, trailer_url, featured)

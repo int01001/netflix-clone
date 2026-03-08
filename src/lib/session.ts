@@ -13,7 +13,7 @@ export async function getUserFromRequest(
   if (!payload) return null;
 
   const users = await query<User[]>(
-    "SELECT id, name, email, avatar_url AS avatarUrl FROM users WHERE id = ? LIMIT 1",
+    "SELECT id, name, email, avatar_url AS avatarUrl, is_pending_profile FROM users WHERE id = ? LIMIT 1",
     [payload.userId],
   );
 

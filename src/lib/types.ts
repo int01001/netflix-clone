@@ -3,6 +3,7 @@ export type User = {
   name: string;
   email: string;
   avatarUrl?: string | null;
+  is_pending_profile?: boolean;
 };
 
 export type Movie = {
