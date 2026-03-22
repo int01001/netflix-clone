@@ -8,6 +8,7 @@ import Row from "./Row";
 import TrailerModal from "./TrailerModal";
 import GenreFilter from "./GenreFilter";
 import InfiniteRows from "./InfiniteRows";
+import MoodChatbot from "./MoodChatbot";
 import type { HomeSections, Movie, User } from "@/lib/types";
 
 type Props = {
@@ -234,6 +235,7 @@ export default function ClientHome({ sections, user }: Props) {
       </div>
 
       <TrailerModal movie={activeMovie} onClose={closeMovie} />
+      <MoodChatbot onSelectMovie={openMovie} />
     </>
   );
 }

@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node scripts/ensure-local-mysql.js && next dev",
+    "build": "node scripts/ensure-local-mysql.js && next build",
+    "start": "node scripts/ensure-local-mysql.js && next start",
     "lint": "eslint",
-    "db:setup": "node scripts/setup-db.js"
+    "db:setup": "node scripts/ensure-local-mysql.js && node scripts/setup-db.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
