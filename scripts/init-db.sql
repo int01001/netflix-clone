@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS netflix CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE netflix;
+CREATE DATABASE IF NOT EXISTS netflix_local CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE netflix_local;
 
 -- Drop and recreate all tables for a clean slate
 DROP TABLE IF EXISTS user_preferences;
